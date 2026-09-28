@@ -107,6 +107,13 @@ tasks.withType<Test>().configureEach {
     jvmArgs("-Duser.language=en", "-Duser.country=US")
     // TranslationsTest reads the string catalogues to check every language is complete.
     systemProperty("again.composeResourcesDir", file("src/commonMain/composeResources").absolutePath)
+    // ScreenshotTest writes into build/screenshots unless `-Pagain.screenshotDir=<dir>` (relative to
+    // the repository root) points it elsewhere: `-Pagain.screenshotDir=docs/screenshots` for the README.
+    systemProperty(
+        "again.screenshotDir",
+        project.findProperty("again.screenshotDir")?.toString()?.let { rootProject.file(it).absolutePath }
+            ?: layout.buildDirectory.dir("screenshots").get().asFile.absolutePath,
+    )
     testLogging {
         events("passed", "failed", "skipped")
         exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL

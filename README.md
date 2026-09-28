@@ -14,9 +14,15 @@
 
 On the stores as **Again Camera: Then & Now**.
 
-| Home | Lining up | Then & now |
-| :---: | :---: | :---: |
-| _screenshot to come_ | _screenshot to come_ | _screenshot to come_ |
+<p align="center">
+  <img src="docs/screenshots/05-home-returning.png" alt="Home, with the last old photo" width="24%">
+  <img src="docs/screenshots/02-camera.png" alt="The old photo over the camera" width="24%">
+  <img src="docs/screenshots/03-compare.png" alt="Then and now, split by a divider" width="24%">
+  <img src="docs/screenshots/06-camera-permission.png" alt="Asking for the camera" width="24%">
+</p>
+
+<p align="center"><sub>From the desktop harness, where a drawn scene stands in for the camera and a sepia copy of it for the old photo.
+All of them: <a href="docs/screenshots">docs/screenshots</a>.</sub></p>
 
 ## Features
 
@@ -79,7 +85,10 @@ JDK 17+. Android needs the Android SDK 36; iOS needs Xcode on a Mac.
 ./gradlew :composeApp:installDebug                   # Android, onto a connected phone
 ./gradlew :composeApp:run -Pagain.android=false      # desktop harness, with a fake camera
 ./gradlew :shared:desktopTest :composeApp:desktopTest -Pagain.android=false   # tests
+./gradlew :composeApp:desktopTest --tests '*ScreenshotTest' -Pagain.android=false -Pagain.screenshotDir=docs/screenshots
 ```
+
+The last one retakes the screenshots above.
 
 For iOS, set your team in `iosApp/Configuration/Config.xcconfig`, open `iosApp/iosApp.xcodeproj`
 and run; Xcode builds the Kotlin framework itself.
