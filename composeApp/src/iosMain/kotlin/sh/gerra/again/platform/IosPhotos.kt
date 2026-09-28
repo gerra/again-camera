@@ -18,6 +18,7 @@ import platform.Foundation.NSError
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSSearchPathForDirectoriesInDomains
 import platform.Foundation.NSApplicationSupportDirectory
+import platform.Foundation.NSCachesDirectory
 import platform.Foundation.NSURL
 import platform.Foundation.NSUserDomainMask
 import platform.Foundation.dataWithBytes
@@ -117,6 +118,14 @@ internal class IosPhotos : Photos {
         check(saved) { "The photo library did not take the photo" }
     }
 
+    /**
+     * Deletes the new photos of earlier runs. They are kept only by saving or sharing them, and
+     * nothing on screen points at one after a restart.
+     */
+    fun clearCaptures() {
+        files.removeItemAtPath(capturesDirectory(), error = null)
+    }
+
     override fun share(photo: CapturedPhoto) {
         val top = topViewController() ?: error("Nothing on screen to share from")
         val sheet = UIActivityViewController(activityItems = listOf(NSURL.fileURLWithPath(photo.path)), applicationActivities = null)
@@ -136,6 +145,10 @@ internal class IosPhotos : Photos {
         }
     }
 }
+
+/** Where the camera writes new photos: the app's caches, which iOS may also empty when space runs low. */
+internal fun capturesDirectory(): String =
+    (NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, true).first() as String) + "/captures"
 
 /**
  * What the picked photo is asked for as. The UTI rather than UTTypeImage, whose binding is nullable
