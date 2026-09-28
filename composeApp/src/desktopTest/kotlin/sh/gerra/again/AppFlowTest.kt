@@ -128,7 +128,8 @@ class AppFlowTest {
         assertEquals(2, camera.permissionRequests)
         onNodeWithText("Open settings").performClick()
         assertEquals(1, camera.settingsOpened)
-        onNodeWithContentDescription("Take photo").assertIsNotEnabled()
+        // No shutter to press until the camera is allowed.
+        onNodeWithContentDescription("Take photo").assertDoesNotExist()
 
         camera.permission.value = CameraPermission.Granted
         waitUntilExactlyOneExists(hasContentDescription("Take photo") and isEnabled(), 5_000)

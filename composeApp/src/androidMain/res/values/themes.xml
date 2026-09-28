@@ -1,0 +1,6 @@
+<resources>
+    <!-- Dark from the first frame, so launching never flashes white before the camera. -->
+    <style name="Theme.Again" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/ic_launcher_background</item>
+    </style>
+</resources>

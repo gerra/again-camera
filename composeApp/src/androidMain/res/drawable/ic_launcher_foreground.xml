@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Two frames, one over the other: then, and now lined up on it. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:strokeColor="#FFEBC98E"
+        android:strokeAlpha="0.55"
+        android:strokeWidth="3"
+        android:pathData="M36,34h30a4,4 0,0 1,4 4v26a4,4 0,0 1,-4 4h-30a4,4 0,0 1,-4 -4v-26a4,4 0,0 1,4 -4z" />
+    <path
+        android:strokeColor="#FFEBC98E"
+        android:strokeWidth="3"
+        android:pathData="M44,42h30a4,4 0,0 1,4 4v26a4,4 0,0 1,-4 4h-30a4,4 0,0 1,-4 -4v-26a4,4 0,0 1,4 -4z" />
+</vector>

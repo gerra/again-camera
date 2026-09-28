@@ -1,0 +1,4 @@
+<resources>
+    <!-- The launcher label; everything the app itself shows is in composeResources. -->
+    <string name="app_name" translatable="false">Again</string>
+</resources>

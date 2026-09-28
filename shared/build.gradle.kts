@@ -37,6 +37,13 @@ kotlin {
     }
 }
 
+tasks.withType<Test>().configureEach {
+    testLogging {
+        events("passed", "failed", "skipped")
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+    }
+}
+
 if (androidEnabled) {
     apply(from = "android.gradle")
 }

@@ -105,6 +105,8 @@ compose.resources {
 tasks.withType<Test>().configureEach {
     // The UI tests look for English text, whatever the runner's locale.
     jvmArgs("-Duser.language=en", "-Duser.country=US")
+    // TranslationsTest reads the string catalogues to check every language is complete.
+    systemProperty("again.composeResourcesDir", file("src/commonMain/composeResources").absolutePath)
     testLogging {
         events("passed", "failed", "skipped")
         exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL

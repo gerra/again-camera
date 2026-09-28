@@ -108,7 +108,9 @@ internal fun CameraScreen(
                     ActionButton(Icons.Filled.Refresh, stringResource(Res.string.camera_reset), model::onResetAlignment, button, enabled = state.guide.isMoved)
                 }
             },
-            bottom = { column ->
+            bottom = bottom@{ column ->
+                // Nothing to line up or take until there is a camera and an old photo to use.
+                if (permission != CameraPermission.Granted || state.problem == CameraProblem.ReferenceUnreadable) return@bottom
                 Column(
                     Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = if (column) 0.dp else 12.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
