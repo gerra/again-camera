@@ -1,0 +1,45 @@
+[versions]
+agp = "8.13.2"
+kotlin = "2.4.20"
+# Not 1.12: its Android artifacts (Jetpack Compose 1.12) need compileSdk 37 and AGP 9.1.
+compose-multiplatform = "1.11.1"
+# Material 3 has its own version line since Compose Multiplatform 1.9; 1.9.0 is the one the
+# Compose 1.11.1 plugin itself pairs with.
+compose-material3 = "1.9.0"
+# The icons no longer ship with Compose Multiplatform, and 1.7.3 is their last release. Only the
+# core set: the few camera glyphs it lacks are drawn in ui/components/Icons.kt.
+compose-material-icons = "1.7.3"
+kotlinx-coroutines = "1.11.0"
+android-activity = "1.13.0"
+# Preview, ImageCapture and the lifecycle binding (camera-lifecycle), PreviewView (camera-view).
+camerax = "1.5.0"
+android-compileSdk = "36"
+# Android 10: MediaStore's RELATIVE_PATH and IS_PENDING save a photo without any storage
+# permission, and ImageDecoder applies EXIF orientation by itself.
+android-minSdk = "29"
+android-targetSdk = "36"
+
+[libraries]
+compose-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "compose-multiplatform" }
+compose-foundation = { module = "org.jetbrains.compose.foundation:foundation", version.ref = "compose-multiplatform" }
+compose-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "compose-material3" }
+compose-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "compose-multiplatform" }
+compose-ui-tooling-preview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "compose-multiplatform" }
+compose-material-icons-core = { module = "org.jetbrains.compose.material:material-icons-core", version.ref = "compose-material-icons" }
+# Named here rather than through the plugin's `compose.*` accessors, which are deprecated.
+compose-components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "compose-multiplatform" }
+compose-ui-test-junit4 = { module = "org.jetbrains.compose.ui:ui-test-junit4", version.ref = "compose-multiplatform" }
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
+kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "kotlinx-coroutines" }
+kotlinx-coroutines-swing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-swing", version.ref = "kotlinx-coroutines" }
+kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
+android-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "android-activity" }
+camerax-core = { module = "androidx.camera:camera-core", version.ref = "camerax" }
+camerax-camera2 = { module = "androidx.camera:camera-camera2", version.ref = "camerax" }
+camerax-lifecycle = { module = "androidx.camera:camera-lifecycle", version.ref = "camerax" }
+camerax-view = { module = "androidx.camera:camera-view", version.ref = "camerax" }
+
+[plugins]
+kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "compose-multiplatform" }
+compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }

@@ -1,0 +1,24 @@
+*.iml
+.gradle
+**/build/
+xcuserdata
+!src/**/build/
+local.properties
+.idea
+.DS_Store
+captures
+.externalNativeBuild
+.cxx
+# Xcode: keep only the project file and shared schemes; the embedded workspace and user state are generated.
+**/*.xcodeproj/*
+!**/*.xcodeproj/project.pbxproj
+!**/*.xcodeproj/xcshareddata/
+**/xcshareddata/WorkspaceSettings.xcsettings
+*.kotlin_module
+.kotlin
+# Signing material: never commit these.
+*.jks
+*.keystore
+*.p8
+*.p12
+*.mobileprovision

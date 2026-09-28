@@ -1,0 +1,12 @@
+// Android library configuration for :shared (applied only when again.android=true).
+android {
+    namespace "sh.gerra.again.shared"
+    compileSdk libs.versions.android.compileSdk.get().toInteger()
+    defaultConfig {
+        minSdk libs.versions.android.minSdk.get().toInteger()
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}

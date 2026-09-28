@@ -1,0 +1,47 @@
+<resources>
+    <string name="app_name">Again</string>
+
+    <!-- Home -->
+    <string name="home_tagline">Pick a memory. Stand where it happened. Take it again.</string>
+    <string name="home_choose">Choose an old photo</string>
+    <string name="home_continue">Continue with this photo</string>
+    <string name="home_last_photo">The old photo you chose last time</string>
+    <string name="home_step_choose">Pick an old photo from your gallery</string>
+    <string name="home_step_align">Stand where it was taken and line it up</string>
+    <string name="home_step_take">Take it again</string>
+    <string name="photo_unreadable">That photo couldn't be opened. Please choose another one.</string>
+
+    <!-- Camera -->
+    <string name="camera_change_photo">Change photo</string>
+    <string name="camera_reset">Reset</string>
+    <string name="camera_flash_on">Flash on</string>
+    <string name="camera_flash_off">Flash off</string>
+    <string name="camera_opacity">Old photo</string>
+    <string name="camera_opacity_description">How clearly the old photo shows</string>
+    <string name="percent">%1$d%</string>
+    <string name="camera_shutter">Take photo</string>
+    <string name="camera_frame_description">Old photo over the camera. Pinch and drag it to line it up.</string>
+    <string name="camera_hint">Pinch and drag the old photo to line it up</string>
+    <string name="camera_capture_failed">The photo couldn't be taken. Please try again.</string>
+    <string name="camera_unavailable">The camera can't be opened right now. Close any other camera app and try again.</string>
+    <string name="camera_permission_title">Allow the camera</string>
+    <string name="camera_permission_body">Again needs the camera to take your new photo. Your photos stay on this phone.</string>
+    <string name="camera_permission_denied">Camera access is off. You can turn it on in Settings, under Permissions.</string>
+    <string name="camera_permission_allow">Allow camera</string>
+    <string name="camera_permission_settings">Open settings</string>
+
+    <!-- Compare -->
+    <string name="compare_hint">Drag to compare then and now</string>
+    <string name="compare_then">Then</string>
+    <string name="compare_now">Now</string>
+    <string name="compare_divider">Divider between then and now</string>
+    <string name="compare_divider_state">%1$d% old photo</string>
+    <string name="compare_save">Save</string>
+    <string name="compare_saved">Saved</string>
+    <string name="compare_share">Share</string>
+    <string name="compare_retake">Retake</string>
+    <string name="compare_saved_message">Saved to your gallery, in Pictures › Again.</string>
+    <string name="compare_save_failed">The photo couldn't be saved. Please try again.</string>
+    <string name="compare_share_failed">Sharing isn't available right now.</string>
+    <string name="compare_load_failed">The photos couldn't be shown.</string>
+</resources>
