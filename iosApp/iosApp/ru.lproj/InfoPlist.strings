@@ -1,0 +1,5 @@
+/* The system's own permission dialogs, in Russian. English is in Info.plist. */
+
+"NSCameraUsageDescription" = "Again использует камеру, чтобы сделать новый снимок. Фотографии остаются на этом телефоне.";
+
+"NSPhotoLibraryAddUsageDescription" = "Again сохраняет новый снимок в медиатеку, когда вы нажимаете «Сохранить».";

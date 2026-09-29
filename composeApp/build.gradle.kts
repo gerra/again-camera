@@ -107,6 +107,9 @@ tasks.withType<Test>().configureEach {
     jvmArgs("-Duser.language=en", "-Duser.country=US")
     // TranslationsTest reads the string catalogues to check every language is complete.
     systemProperty("again.composeResourcesDir", file("src/commonMain/composeResources").absolutePath)
+    // ...and the iOS and Android lists of languages, and iOS's own permission prompts, for each of them.
+    systemProperty("again.iosAppDir", rootProject.file("iosApp/iosApp").absolutePath)
+    systemProperty("again.localesConfig", file("src/androidMain/res/xml/locales_config.xml").absolutePath)
     // ScreenshotTest writes into build/screenshots unless `-Pagain.screenshotDir=<dir>` (relative to
     // the repository root) points it elsewhere: `-Pagain.screenshotDir=docs/screenshots` for the README.
     systemProperty(

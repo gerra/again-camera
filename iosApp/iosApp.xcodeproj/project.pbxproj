@@ -10,6 +10,7 @@
 		1A40B90C7E8844F48DB0A227 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 122CB644AC9849C7845AE9A7 /* ContentView.swift */; };
 		7C1E2D3A4B5C6D7E8F9A0B1C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 8D2F3E4A5B6C7D8E9FA0B1C2 /* Assets.xcassets */; };
 		A1B2C3D4E5F60718293A4B5C /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = B2C3D4E5F60718293A4B5C6D /* PrivacyInfo.xcprivacy */; };
+		C4D5E6F708192A3B4C5D6E7F /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = D5E6F708192A3B4C5D6E7F80 /* InfoPlist.strings */; };
 		F6A5F7933FD0450692911CD3 /* iOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC735ADC88494CDFB83E94D6 /* iOSApp.swift */; };
 /* End PBXBuildFile section */
 
@@ -21,6 +22,7 @@
 		8D2F3E4A5B6C7D8E9FA0B1C2 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B2C3D4E5F60718293A4B5C6D /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		CC735ADC88494CDFB83E94D6 /* iOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iOSApp.swift; sourceTree = "<group>"; };
+		E6F708192A3B4C5D6E7F8091 /* ru */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ru; path = ru.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -42,6 +44,7 @@
 				5EE831CA06674C458816A360 /* Info.plist */,
 				8D2F3E4A5B6C7D8E9FA0B1C2 /* Assets.xcassets */,
 				B2C3D4E5F60718293A4B5C6D /* PrivacyInfo.xcprivacy */,
+				D5E6F708192A3B4C5D6E7F80 /* InfoPlist.strings */,
 			);
 			path = iosApp;
 			sourceTree = "<group>";
@@ -114,6 +117,7 @@
 			knownRegions = (
 				en,
 				Base,
+				ru,
 			);
 			mainGroup = 6D2D7EE0315D4DF48EB31799;
 			productRefGroup = 64525F1FE9FC4C0F90C61D35 /* Products */;
@@ -132,6 +136,7 @@
 			files = (
 				7C1E2D3A4B5C6D7E8F9A0B1C /* Assets.xcassets in Resources */,
 				A1B2C3D4E5F60718293A4B5C /* PrivacyInfo.xcprivacy in Resources */,
+				C4D5E6F708192A3B4C5D6E7F /* InfoPlist.strings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -170,6 +175,17 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXVariantGroup section */
+		D5E6F708192A3B4C5D6E7F80 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				E6F708192A3B4C5D6E7F8091 /* ru */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
 		24877E1976684EC59CA0195A /* Debug */ = {
