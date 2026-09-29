@@ -9,7 +9,7 @@
 
 <p align="center">
   <img alt="Kotlin Multiplatform" src="https://img.shields.io/badge/Kotlin_Multiplatform-2.4-7F52FF?logo=kotlin&logoColor=white">
-  <img alt="Platforms: Android, iOS shell" src="https://img.shields.io/badge/platforms-Android_·_iOS_shell-0D0D0D">
+  <img alt="Platforms: Android, iOS" src="https://img.shields.io/badge/platforms-Android_·_iOS-0D0D0D">
 </p>
 
 On the stores as **Again Camera: Then & Now**.
@@ -40,8 +40,9 @@ No account, no server, no analytics, no ads.
 
 ## How it works
 
-The camera screen's frame has the old photo's proportions, and CameraX crops the new photograph to
-exactly what that frame shows (a `ViewPort` shared by `Preview` and `ImageCapture`). So the new photo
+The camera screen's frame has the old photo's proportions, and the new photograph is cropped to
+exactly what that frame shows: by CameraX on Android (a `ViewPort` shared by `Preview` and
+`ImageCapture`), and on iOS by cutting AVFoundation's photo down to what its preview layer shows. So the new photo
 has the old one's shape, and the comparison can draw both in one frame: the new photo filling it, the
 old one placed by the same pinch, drag and twist that lined it up in the viewfinder.
 
@@ -62,7 +63,8 @@ composeApp/    Compose Multiplatform UI and the platform boundary.
                  AgainTheme), platform/ (the Camera and Photos interfaces), composeResources/
   androidMain/   MainActivity, AndroidCamera (CameraX), AndroidPhotos (photo picker, MediaStore,
                  share sheet)
-  iosMain/       MainViewController, IosPhotos (PHPicker, PhotoKit, share sheet), IosCamera
+  iosMain/       MainViewController, IosPhotos (PHPicker, PhotoKit, share sheet), IosCamera and
+                 IosCameraSession (AVFoundation)
   skikoMain/     Photo decoding with EXIF orientation, shared by the desktop and iOS
   desktopMain/   Development harness: the whole app with a drawn scene for a camera
 iosApp/        The SwiftUI wrapper and Xcode project.
@@ -70,12 +72,8 @@ iosApp/        The SwiftUI wrapper and Xcode project.
 
 The shared UI knows the camera only through two small interfaces in `composeApp/.../platform`:
 `Camera` (the permission and a composable `Preview` that opens the camera while it is on screen)
-and `CameraController` (`capture()` and the flash). Android owns the CameraX lifecycle behind them;
-AVFoundation fits behind the same two on iOS.
-
-**Status.** Android is the v1 platform. The iOS app runs the same UI with the photo picker, saving
-and sharing, and asks for the camera, but its preview and capture are not built yet — `IosCamera`
-describes the AVFoundation version.
+and `CameraController` (`capture()` and the flash). Android owns the CameraX lifecycle behind them,
+and iOS an `AVCaptureSession` behind the same two.
 
 ## Build from source
 
@@ -91,7 +89,9 @@ JDK 17+. Android needs the Android SDK 36; iOS needs Xcode on a Mac.
 The last one retakes the screenshots above.
 
 For iOS, set your team in `iosApp/Configuration/Config.xcconfig`, open `iosApp/iosApp.xcodeproj`
-and run; Xcode builds the Kotlin framework itself.
+and run; Xcode builds the Kotlin framework itself. [docs/ios.md](docs/ios.md) goes step by step:
+installing on your own iPhone, TestFlight, and what the App Store still needs. The
+[iOS workflow](.github/workflows/ios.yml) builds the app on macOS on every push.
 
 The tests cover the rules (opacity and scale bounds, reset, the divider) in `shared/`, and in
 `composeApp/src/desktopTest` the screen models and the whole flow on the desktop harness: choose,
@@ -104,7 +104,8 @@ Again does not upload photos anywhere. Reference and captured photos remain on t
 user explicitly shares them.
 
 - It works fully offline; the Android app does not even ask for internet access.
-- The only permission it asks for is the camera. The old photo comes through the system photo
+- The only permission it asks for is the camera (and, on iOS, adding to the photo library when you
+  tap Save). The old photo comes through the system photo
   picker, which hands over just the one picture chosen, and saving goes through the system's
   MediaStore, so there is no access to the rest of the gallery.
 - No accounts, no analytics, no telemetry, no ads.
