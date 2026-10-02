@@ -22,3 +22,5 @@ captures
 *.p8
 *.p12
 *.mobileprovision
+# Python bytecode from running the scripts in tools/.
+__pycache__/
