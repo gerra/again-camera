@@ -8,6 +8,8 @@ android {
         applicationId = "sh.gerra.again"
         minSdk = libs.versions.android.minSdk.get().toInteger()
         targetSdk = libs.versions.android.targetSdk.get().toInteger()
+        // Every upload to Google Play needs a higher versionCode than the last; the Android workflow
+        // passes its run number, and a hand-built bundle takes `-Pagain.versionCode=<n>`.
         versionCode = (project.findProperty("again.versionCode") ?: "1").toInteger()
         versionName = "1.0"
     }
@@ -16,11 +18,31 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+    // The Google Play upload key. The release build is signed with it when `again.uploadKeystore`
+    // names the keystore (the Android workflow passes the repository's secrets this way, and
+    // ~/.gradle/gradle.properties is the place for it on a developer's machine; see
+    // docs/android.md). Without it the release bundle is built unsigned, which is what every push
+    // to GitHub gets.
+    def uploadKeystore = project.findProperty("again.uploadKeystore")
+    if (uploadKeystore) {
+        def uploadKeystorePassword = project.findProperty("again.uploadKeystorePassword")
+        signingConfigs {
+            upload {
+                storeFile = rootProject.file(uploadKeystore)
+                storePassword = uploadKeystorePassword
+                keyAlias = project.findProperty("again.uploadKeyAlias") ?: "upload"
+                keyPassword = project.findProperty("again.uploadKeyPassword") ?: uploadKeystorePassword
+            }
+        }
+    }
     buildTypes {
         release {
             minifyEnabled = true
             shrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            if (uploadKeystore) {
+                signingConfig = signingConfigs.upload
+            }
         }
     }
     compileOptions {

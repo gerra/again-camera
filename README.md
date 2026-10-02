@@ -93,6 +93,11 @@ and run; Xcode builds the Kotlin framework itself. [docs/ios.md](docs/ios.md) go
 installing on your own iPhone, TestFlight, and what the App Store still needs. The
 [iOS workflow](.github/workflows/ios.yml) builds the app on macOS on every push.
 
+For Android, [docs/android.md](docs/android.md) does the same: installing on your own phone, Google
+Play's internal testing, and what the store listing still needs. The
+[Android workflow](.github/workflows/android.yml) builds the debug APK and the release app bundle
+on every push, and uploads the bundle to Google Play on request.
+
 The tests cover the rules (opacity and scale bounds, reset, the divider) in `shared/`, and in
 `composeApp/src/desktopTest` the screen models and the whole flow on the desktop harness: choose,
 line up, take, compare, save, share, retake, with a failed capture, a refused camera and a file that
