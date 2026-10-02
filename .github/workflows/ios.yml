@@ -2,8 +2,23 @@ name: iOS
 
 # Builds the iOS app the way Xcode does (the Kotlin framework through the project's own build
 # phase), for the simulator and, unsigned, for a device in Release — the build TestFlight gets.
+#
+# On every pull request, built as the merge it would make, and on main once it is merged, so
+# main stays buildable; a push to any other branch runs it from "Run workflow". Path-filtered,
+# so it must not be a required check: a pull request that skips it would wait on it forever.
 on:
   push:
+    branches: [main]
+    paths:
+      - "composeApp/**"
+      - "shared/**"
+      - "iosApp/**"
+      - "gradle/**"
+      - "*.gradle.kts"
+      - "gradle.properties"
+      - ".github/workflows/ios.yml"
+  # The same list: tools/test_play.py checks that the two stay equal.
+  pull_request:
     paths:
       - "composeApp/**"
       - "shared/**"
@@ -14,9 +29,11 @@ on:
       - ".github/workflows/ios.yml"
   workflow_dispatch:
 
+# A newer push to the same pull request makes the older build moot; a build of main is never
+# cut short, so every merge has its result.
 concurrency:
   group: ios-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build:

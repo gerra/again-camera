@@ -1,0 +1,101 @@
+name: Google Play
+
+# Builds the Android app bundle on a Linux runner, signs it with the upload key kept in the
+# repository secrets and sends it to a testing track through the Play Developer API, with a
+# service account. Testers on the track get it once Play has processed it. "Run workflow"
+# starts it. Until the owner adds the Play secrets the job checks them, says so in the run
+# summary and does nothing else.
+#
+# One-time setup, the secrets this needs and troubleshooting: docs/android.md
+on:
+  workflow_dispatch:
+    inputs:
+      build_number:
+        description: "versionCode. Defaults to the workflow run number."
+        required: false
+        type: string
+
+jobs:
+  upload:
+    name: Bundle and upload
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    # Never upload two bundles at once: Play edits of one app collide.
+    concurrency:
+      group: play
+      cancel-in-progress: false
+    env:
+      BUILD_NUMBER: ${{ inputs.build_number || github.run_number }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # Every later step is skipped while a secret is missing; the summary says which.
+      - name: Check secrets
+        id: secrets
+        env:
+          ANDROID_UPLOAD_KEYSTORE_BASE64: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
+          ANDROID_UPLOAD_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_PASSWORD }}
+          ANDROID_UPLOAD_KEY_ALIAS: ${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }}
+          ANDROID_UPLOAD_KEY_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEY_PASSWORD }}
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: python3 tools/play.py check-secrets
+
+      # The runner context is not available in job-level env, so the temp paths are set
+      # here. tools/play.py holds them, and exports them for the steps below.
+      - name: Set paths
+        if: steps.secrets.outputs.configured == 'true'
+        run: python3 tools/play.py paths
+      - uses: actions/setup-java@v4
+        if: steps.secrets.outputs.configured == 'true'
+        with:
+          distribution: temurin
+          java-version: 17
+      # A run from a branch other than the default one would only read the Gradle cache; write
+      # it here so the next bundle starts warm. The Android SDK itself is on the Ubuntu image.
+      - uses: gradle/actions/setup-gradle@v4
+        if: steps.secrets.outputs.configured == 'true'
+        with:
+          cache-read-only: false
+
+      # PLAY_TRACK is an optional repository variable naming the track; unset means internal
+      # testing. Play's first closed testing track is "alpha".
+      - name: Read app settings
+        if: steps.secrets.outputs.configured == 'true'
+        env:
+          PLAY_TRACK: ${{ vars.PLAY_TRACK }}
+        run: python3 tools/play.py settings
+
+      - name: Install the upload key and the service account key
+        if: steps.secrets.outputs.configured == 'true'
+        env:
+          ANDROID_UPLOAD_KEYSTORE_BASE64: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: python3 tools/play.py install-signing
+
+      - name: Build the bundle
+        if: steps.secrets.outputs.configured == 'true'
+        env:
+          ANDROID_UPLOAD_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_PASSWORD }}
+          ANDROID_UPLOAD_KEY_ALIAS: ${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }}
+          ANDROID_UPLOAD_KEY_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEY_PASSWORD }}
+        run: python3 tools/play.py bundle
+
+      - name: Upload to Google Play
+        if: steps.secrets.outputs.configured == 'true'
+        run: python3 tools/play.py upload
+
+      # The mapping file too: Play has its own copy, but a crash reported anywhere else needs it
+      # to read, and R8 never writes the same one twice.
+      - name: Keep the bundle
+        if: always() && steps.secrets.outputs.configured == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: play-bundle-${{ env.BUILD_NUMBER }}
+          path: |
+            ${{ env.BUNDLE_PATH }}
+            ${{ env.MAPPING_PATH }}
+          if-no-files-found: ignore
+
+      - name: Remove signing material
+        if: always()
+        run: python3 tools/play.py cleanup
