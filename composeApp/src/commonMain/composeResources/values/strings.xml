@@ -16,6 +16,8 @@
     <string name="camera_reset">Reset</string>
     <string name="camera_flash_on">Flash on</string>
     <string name="camera_flash_off">Flash off</string>
+    <string name="camera_lens_front">Selfie camera</string>
+    <string name="camera_lens_back">Back camera</string>
     <string name="camera_opacity">Old photo</string>
     <string name="camera_opacity_description">How clearly the old photo shows</string>
     <string name="percent">%1$d%</string>

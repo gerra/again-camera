@@ -3,6 +3,7 @@ package sh.gerra.again
 import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -17,6 +18,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.asSkiaBitmap
 import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
@@ -32,10 +34,12 @@ import sh.gerra.again.platform.Camera
 import sh.gerra.again.platform.CameraController
 import sh.gerra.again.platform.CameraPermission
 import sh.gerra.again.platform.CameraStatus
+import sh.gerra.again.platform.Lens
 
 /**
  * The harness's camera: a drawn scene in place of a lens. Like the real one, its photograph is the
- * scene alone, drawn afresh at the preview's size, never a picture of the screen.
+ * scene alone, drawn afresh at the preview's size, never a picture of the screen. Its front camera
+ * shows the scene as a mirror would, and photographs it that way too, as a phone's does.
  */
 internal class FakeCamera(private val captures: File) : Camera {
     override val permission = MutableStateFlow(CameraPermission.Granted)
@@ -47,36 +51,47 @@ internal class FakeCamera(private val captures: File) : Camera {
     override fun openSettings() = Unit
 
     @Composable
-    override fun Preview(modifier: Modifier, onStatus: (CameraStatus) -> Unit) {
+    override fun Preview(modifier: Modifier, lens: Lens, onStatus: (CameraStatus) -> Unit) {
         val status by rememberUpdatedState(onStatus)
         val controller = remember { Controller() }
-        Canvas(modifier.onSizeChanged { controller.size = it }) { drawScene() }
-        LaunchedEffect(controller) { status(CameraStatus.Ready(controller)) }
+        SideEffect { controller.lens = lens }
+        Canvas(modifier.onSizeChanged { controller.size = it }) { drawScene(mirrored = lens == Lens.Front) }
+        // Switching cameras is instant here; a real one reports being ready again once it has.
+        LaunchedEffect(controller, lens) { status(CameraStatus.Ready(controller)) }
     }
 
     private inner class Controller : CameraController {
         var size = IntSize(1200, 900)
+        var lens = Lens.Back
         override val hasFlash = true
+        override val canSwitchLens = true
         override fun setFlash(enabled: Boolean) = Unit
 
         override suspend fun capture(): CapturedPhoto = withContext(Dispatchers.IO) {
             captures.mkdirs()
             val file = File(captures, "again-${System.currentTimeMillis()}.jpg")
-            file.writeBytes(renderScene(size.width.coerceAtLeast(1), size.height.coerceAtLeast(1)))
+            file.writeBytes(renderScene(size.width.coerceAtLeast(1), size.height.coerceAtLeast(1), mirrored = lens == Lens.Front))
             CapturedPhoto(file.absolutePath)
         }
     }
 }
 
-/** The scene at [width] × [height], as a JPEG. */
-internal fun renderScene(width: Int, height: Int, then: Boolean = false): ByteArray {
+/** The scene at [width] × [height], as a JPEG; [mirrored] as the front camera shows and takes it. */
+internal fun renderScene(width: Int, height: Int, then: Boolean = false, mirrored: Boolean = false): ByteArray {
     val bitmap = ImageBitmap(width, height)
-    CanvasDrawScope().draw(Density(1f), LayoutDirection.Ltr, Canvas(bitmap), Size(width.toFloat(), height.toFloat())) { drawScene(then) }
+    CanvasDrawScope().draw(Density(1f), LayoutDirection.Ltr, Canvas(bitmap), Size(width.toFloat(), height.toFloat())) { drawScene(then, mirrored) }
     return Image.makeFromBitmap(bitmap.asSkiaBitmap()).encodeToData(EncodedImageFormat.JPEG, 90)!!.bytes
 }
 
-/** A house under a sky; [then] draws it as it was, in sepia, with the tree still small. */
-private fun DrawScope.drawScene(then: Boolean = false) {
+/**
+ * A house under a sky; [then] draws it as it was, in sepia, with the tree still small, and
+ * [mirrored] draws it left to right, as a mirror would.
+ */
+private fun DrawScope.drawScene(then: Boolean = false, mirrored: Boolean = false) {
+    if (mirrored) {
+        scale(scaleX = -1f, scaleY = 1f) { drawScene(then) }
+        return
+    }
     val w = size.width
     val h = size.height
     val tint = { c: Color -> if (then) sepia(c) else c }

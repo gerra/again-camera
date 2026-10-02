@@ -13,6 +13,7 @@ import sh.gerra.again.domain.Guide
 import sh.gerra.again.domain.ReferencePhoto
 import sh.gerra.again.platform.CameraController
 import sh.gerra.again.platform.CameraStatus
+import sh.gerra.again.platform.Lens
 import sh.gerra.again.platform.Photos
 import sh.gerra.again.platform.PickResult
 import sh.gerra.again.platform.loadOrNull
@@ -32,6 +33,10 @@ internal data class CameraUiState(
     /** The old photo, decoded; null while it loads. */
     val reference: ImageBitmap? = null,
     val cameraReady: Boolean = false,
+    /** The camera in use: the back one until the user turns it on themselves for a selfie. */
+    val lens: Lens = Lens.Back,
+    /** Whether there is another camera to turn to. */
+    val canSwitchLens: Boolean = false,
     val hasFlash: Boolean = false,
     val flash: Boolean = false,
     val isCapturing: Boolean = false,
@@ -44,9 +49,9 @@ internal data class CameraUiState(
 
 /**
  * The camera screen's state: the guide (the old photo, how see-through it is and where it has been
- * moved) and the shutter. It knows the camera only as a [CameraController], so all of it runs in a
- * test without one. The guide is kept when the comparison is pushed over this screen, so a retake
- * starts from the same alignment.
+ * moved), which camera is in use, and the shutter. It knows the camera only as a [CameraController],
+ * so all of it runs in a test without one. The guide and the lens are kept when the comparison is
+ * pushed over this screen, so a retake starts from the same alignment, through the same camera.
  */
 internal class CameraModel(reference: ReferencePhoto, private val photos: Photos) : ScreenModel() {
     private val _state = MutableStateFlow(CameraUiState(Guide(reference)))
@@ -69,6 +74,7 @@ internal class CameraModel(reference: ReferencePhoto, private val photos: Photos
                 _state.update {
                     it.copy(
                         cameraReady = true,
+                        canSwitchLens = status.controller.canSwitchLens,
                         hasFlash = status.controller.hasFlash,
                         problem = it.problem.takeUnless { p -> p == CameraProblem.CameraUnavailable },
                     )
@@ -97,6 +103,16 @@ internal class CameraModel(reference: ReferencePhoto, private val photos: Photos
         val flash = !_state.value.flash
         controller?.setFlash(flash)
         _state.update { it.copy(flash = flash) }
+    }
+
+    /**
+     * The other camera: the front one for a selfie, or back again. The preview switches to it and
+     * reports being ready anew; the guide stays as it was lined up. Not while a photo is being taken,
+     * which the switch would spoil.
+     */
+    fun onLensToggled() {
+        if (_state.value.isCapturing) return
+        _state.update { it.copy(lens = it.lens.other) }
     }
 
     /**

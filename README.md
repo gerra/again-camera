@@ -32,6 +32,9 @@ All of them: <a href="docs/screenshots">docs/screenshots</a>.</sub></p>
   twist it into line; a slider sets how strongly it shows; Reset puts it back.
 - **A clean photograph.** The shutter takes the camera's own picture. The old photo over the viewfinder
   is a guide on screen and never ends up in the new photo.
+- **Selfies too.** A button beside the shutter turns the camera on yourself, and back. The front
+  camera's preview is a mirror, as people expect, and so is its photograph: what you lined up is what
+  you get.
 - **Then and now** in one frame, split by a divider to drag across.
 - **Save** to the gallery (Pictures › Again), **Share**, or **Retake** with the old photo still lined up.
 - **English and Russian.** Large controls, words next to every icon, screen-reader labels throughout.
@@ -48,6 +51,12 @@ old one placed by the same pinch, drag and twist that lined it up in the viewfin
 
 The guide's position is an `OverlayTransform` in fractions of the frame, not pixels, so the same
 alignment holds in the viewfinder, with the phone turned, and in the comparison.
+
+The front camera's preview is a mirror, on both platforms, so its photograph is made one too, or what
+was lined up would come out the other way round. Like the turning, the mirroring goes into the JPEG's
+orientation tag, with the pixels as the sensor gave them: CameraX writes it from the capture's
+metadata, and on iOS the orientation the cropped photo is written with is the mirror image of the
+camera's.
 
 ## Architecture
 
@@ -71,9 +80,10 @@ iosApp/        The SwiftUI wrapper and Xcode project.
 ```
 
 The shared UI knows the camera only through two small interfaces in `composeApp/.../platform`:
-`Camera` (the permission and a composable `Preview` that opens the camera while it is on screen)
-and `CameraController` (`capture()` and the flash). Android owns the CameraX lifecycle behind them,
-and iOS an `AVCaptureSession` behind the same two.
+`Camera` (the permission and a composable `Preview` that opens the camera, through the `Lens` the UI
+asks for, while it is on screen) and `CameraController` (`capture()`, the flash, and whether there
+is another lens). Android owns the CameraX lifecycle behind them, and iOS an `AVCaptureSession`
+behind the same two.
 
 ## Build from source
 
@@ -104,8 +114,8 @@ uploads it to a testing track, through the Python in [`tools/`](tools).
 
 The tests cover the rules (opacity and scale bounds, reset, the divider) in `shared/`, and in
 `composeApp/src/desktopTest` the screen models and the whole flow on the desktop harness: choose,
-line up, take, compare, save, share, retake, with a failed capture, a refused camera and a file that
-is not a photo.
+line up, take, compare, save, share, retake, a selfie through the front camera, with a failed
+capture, a refused camera and a file that is not a photo.
 
 ## Privacy
 

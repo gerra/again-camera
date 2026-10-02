@@ -3,6 +3,7 @@ package sh.gerra.again
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -17,19 +18,26 @@ import sh.gerra.again.platform.Camera
 import sh.gerra.again.platform.CameraController
 import sh.gerra.again.platform.CameraPermission
 import sh.gerra.again.platform.CameraStatus
+import sh.gerra.again.platform.Lens
 import sh.gerra.again.platform.Photos
 import sh.gerra.again.platform.PickResult
 
-/** A camera whose shutter the test controls: [onCapture] decides what each photograph is, or throws. */
+/**
+ * A camera whose shutter the test controls: [onCapture] decides what each photograph is, or throws.
+ * It has both lenses unless told otherwise, and remembers which one the preview last asked for.
+ */
 internal class TestCamera(
     permission: CameraPermission = CameraPermission.Granted,
     var onCapture: suspend () -> CapturedPhoto = { error("no capture expected") },
+    private val lenses: Int = 2,
 ) : Camera {
     override val permission = MutableStateFlow(permission)
     var permissionRequests = 0
     var settingsOpened = 0
     var captures = 0
     var flash: Boolean? = null
+    /** The lens the preview is showing, once it is on screen. */
+    var lens: Lens? = null
 
     override fun requestPermission() {
         permissionRequests++
@@ -41,6 +49,7 @@ internal class TestCamera(
 
     val controller = object : CameraController {
         override val hasFlash = true
+        override val canSwitchLens = lenses > 1
         override fun setFlash(enabled: Boolean) {
             flash = enabled
         }
@@ -52,10 +61,11 @@ internal class TestCamera(
     }
 
     @Composable
-    override fun Preview(modifier: Modifier, onStatus: (CameraStatus) -> Unit) {
+    override fun Preview(modifier: Modifier, lens: Lens, onStatus: (CameraStatus) -> Unit) {
         val status by rememberUpdatedState(onStatus)
+        SideEffect { this.lens = lens }
         Box(modifier)
-        LaunchedEffect(Unit) { status(CameraStatus.Ready(controller)) }
+        LaunchedEffect(lens) { status(CameraStatus.Ready(controller)) }
     }
 }
 

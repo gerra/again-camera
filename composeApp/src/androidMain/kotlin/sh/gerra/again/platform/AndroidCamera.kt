@@ -66,7 +66,7 @@ internal class AndroidCamera(private val activity: ComponentActivity) : Camera {
     }
 
     @Composable
-    override fun Preview(modifier: Modifier, onStatus: (CameraStatus) -> Unit) {
+    override fun Preview(modifier: Modifier, lens: Lens, onStatus: (CameraStatus) -> Unit) {
         val status by rememberUpdatedState(onStatus)
         val session = remember { CameraSession(activity) { status(it) } }
         DisposableEffect(session) { onDispose { session.close() } }
@@ -78,10 +78,11 @@ internal class AndroidCamera(private val activity: ComponentActivity) : Camera {
                     scaleType = PreviewView.ScaleType.FILL_CENTER
                     // Lining a photo up takes a while; the screen stays on while the camera is.
                     keepScreenOn = true
-                    session.open(this)
                 }
             },
             modifier = modifier,
+            // Once the view exists, and again whenever the lens changes.
+            update = { view -> session.show(view, lens) },
         )
     }
 }
@@ -97,7 +98,8 @@ internal class AndroidCamera(private val activity: ComponentActivity) : Camera {
  *
  * Both are turned with the display, so the photo comes out the way the screen showed it. The
  * activity handles its own rotation, so the session re-binds when the preview's size or the
- * display's rotation changes.
+ * display's rotation changes, and likewise when the [lens] does: the use cases are simply bound to
+ * the other camera.
  */
 private class CameraSession(
     private val activity: ComponentActivity,
@@ -119,9 +121,20 @@ private class CameraSession(
     private var provider: ProcessCameraProvider? = null
     private var view: PreviewView? = null
     private var camera: BoundCamera? = null
-    /** The preview's width and height and the display's rotation the use cases were last bound for. */
-    private var boundFor: Triple<Int, Int, Int>? = null
+    /** What the use cases were last bound for; null while they are not. */
+    private var boundFor: Binding? = null
     private var closed = false
+
+    /** The camera asked for. The other one stands in on a phone that lacks it. */
+    var lens = Lens.Back
+        set(value) {
+            if (field == value) return
+            field = value
+            bind()
+        }
+
+    /** The preview's width and height, the display's rotation and the camera the use cases were bound for. */
+    private data class Binding(val width: Int, val height: Int, val rotation: Int, val lens: Lens)
 
     private val layoutListener = View.OnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> bind() }
 
@@ -133,7 +146,13 @@ private class CameraSession(
         }
     }
 
-    fun open(view: PreviewView) {
+    /** The first call opens the camera in [view] through [lens]; the later ones only switch the lens. */
+    fun show(view: PreviewView, lens: Lens) {
+        if (this.view == null) open(view)
+        this.lens = lens
+    }
+
+    private fun open(view: PreviewView) {
         this.view = view
         preview.setSurfaceProvider(view.surfaceProvider)
         view.addOnLayoutChangeListener(layoutListener)
@@ -159,20 +178,15 @@ private class CameraSession(
         val view = view ?: return
         val display = view.display ?: return
         if (closed || view.width == 0 || view.height == 0) return
-        val key = Triple(view.width, view.height, display.rotation)
-        if (key == boundFor) return
-        val viewPort = view.getViewPort(display.rotation) ?: return
-        val selector = listOf(CameraSelector.DEFAULT_BACK_CAMERA, CameraSelector.DEFAULT_FRONT_CAMERA).firstOrNull {
-            try {
-                provider.hasCamera(it)
-            } catch (e: Exception) {
-                false
-            }
-        }
-        if (selector == null) {
+        // The camera asked for, or the other one on a phone with just that (a front camera alone, say).
+        val bound = listOf(lens, lens.other).firstOrNull(::has)
+        if (bound == null) {
             onStatus(CameraStatus.Unavailable)
             return
         }
+        val key = Binding(view.width, view.height, display.rotation, bound)
+        if (key == boundFor) return
+        val viewPort = view.getViewPort(display.rotation) ?: return
         preview.targetRotation = display.rotation
         imageCapture.targetRotation = display.rotation
         val group = UseCaseGroup.Builder()
@@ -182,7 +196,7 @@ private class CameraSession(
             .build()
         try {
             provider.unbind(preview, imageCapture)
-            camera = provider.bindToLifecycle(activity, selector, group)
+            camera = provider.bindToLifecycle(activity, bound.selector, group)
             boundFor = key
             onStatus(CameraStatus.Ready(this))
         } catch (e: Exception) {
@@ -194,6 +208,12 @@ private class CameraSession(
         }
     }
 
+    private fun has(lens: Lens): Boolean = try {
+        provider?.hasCamera(lens.selector) == true
+    } catch (e: Exception) {
+        false
+    }
+
     fun close() {
         closed = true
         view?.removeOnLayoutChangeListener(layoutListener)
@@ -202,9 +222,12 @@ private class CameraSession(
         preview.setSurfaceProvider(null)
         view = null
         camera = null
+        boundFor = null
     }
 
     override val hasFlash: Boolean get() = camera?.cameraInfo?.hasFlashUnit() == true
+
+    override val canSwitchLens: Boolean get() = Lens.entries.all(::has)
 
     override fun setFlash(enabled: Boolean) {
         imageCapture.flashMode = if (enabled) ImageCapture.FLASH_MODE_ON else ImageCapture.FLASH_MODE_OFF
@@ -214,11 +237,18 @@ private class CameraSession(
      * ImageCapture writes the JPEG straight from the camera into the app's cache. The callback comes
      * on the main thread, so no executor is created here to be leaked. Cancelling (the screen left
      * mid-capture) just stops waiting; the file, if it is still written, goes at the next launch.
+     *
+     * The front camera's preview is a mirror, as [PreviewView] shows it, and so the photograph is
+     * made one too, or what was lined up would come out the other way round: CameraX flips it through
+     * the JPEG's orientation tag, with the pixels as the sensor gave them, as it does the turning.
      */
     override suspend fun capture(): CapturedPhoto {
         val folder = AndroidPhotos.captures(activity).apply { mkdirs() }
         val file = File(folder, "again-${System.currentTimeMillis()}.jpg")
-        val options = ImageCapture.OutputFileOptions.Builder(file).build()
+        val mirrored = boundFor?.lens == Lens.Front
+        val options = ImageCapture.OutputFileOptions.Builder(file)
+            .setMetadata(ImageCapture.Metadata().apply { isReversedHorizontal = mirrored })
+            .build()
         return suspendCancellableCoroutine { continuation ->
             imageCapture.takePicture(
                 options,
@@ -241,6 +271,12 @@ private class CameraSession(
 }
 
 private const val TAG = "AndroidCamera"
+
+private val Lens.selector: CameraSelector
+    get() = when (this) {
+        Lens.Back -> CameraSelector.DEFAULT_BACK_CAMERA
+        Lens.Front -> CameraSelector.DEFAULT_FRONT_CAMERA
+    }
 
 /**
  * The largest photograph asked of the camera, about 20 megapixels: the usual full resolution of a
