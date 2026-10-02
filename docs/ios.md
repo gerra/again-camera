@@ -8,7 +8,10 @@ saving goes through PhotoKit with add-only access, and sharing uses the system s
 
 - A Mac with **Xcode** (from the App Store) and a **JDK 17+**. Any of these works: the
   [Temurin](https://adoptium.net) installer, Android Studio (its bundled JDK is picked up), or
-  `brew install openjdk@17`.
+  `brew install openjdk@17`. On an Apple Silicon Mac it has to be an arm64 (aarch64) build: the
+  Apple Silicon downloads of Temurin and Android Studio and an `/opt/homebrew` Homebrew give
+  one; an Intel build runs under Rosetta 2, and the Kotlin plugin then takes the host for an
+  Intel Mac.
 - An **Apple ID**. A free one is enough to put the app on your own iPhone. TestFlight and the App
   Store need a paid [Apple Developer Program](https://developer.apple.com/programs/) membership.
 
@@ -84,6 +87,10 @@ Still to do in App Store Connect:
 
 - **"Unable to locate a Java Runtime"** during the Kotlin build phase: install a JDK as above.
   The build phase also looks for Android Studio's and Homebrew's.
+- **"Gradle is running on an x86_64 JDK under Rosetta 2"**: the JDK Gradle started on is an
+  Intel build. `/usr/libexec/java_home -V` lists each installed JDK with its architecture; pick
+  an arm64 one, in Android Studio under Settings › Build, Execution, Deployment › Build Tools ›
+  Gradle › Gradle JDK, or through `JAVA_HOME` in a terminal.
 - **"No such module 'ComposeApp'"** in the editor before the first build: build once (⌘B), and
   Xcode finds the framework Gradle made.
 - **The camera shows "can't be opened"**: another app may be using it (on iPad, in Split View),
