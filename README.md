@@ -84,9 +84,10 @@ JDK 17+. Android needs the Android SDK 36; iOS needs Xcode on a Mac.
 ./gradlew :composeApp:run -Pagain.android=false      # desktop harness, with a fake camera
 ./gradlew :shared:desktopTest :composeApp:desktopTest -Pagain.android=false   # tests
 ./gradlew :composeApp:desktopTest --tests '*ScreenshotTest' -Pagain.android=false -Pagain.screenshotDir=docs/screenshots
+python3 -m unittest discover -s tools -p 'test_*.py'      # the Google Play scripts
 ```
 
-The last one retakes the screenshots above.
+The screenshot one retakes the screenshots above.
 
 For iOS, set your team in `iosApp/Configuration/Config.xcconfig`, open `iosApp/iosApp.xcodeproj`
 and run; Xcode builds the Kotlin framework itself. [docs/ios.md](docs/ios.md) goes step by step:
@@ -94,9 +95,10 @@ installing on your own iPhone, TestFlight, and what the App Store still needs. T
 [iOS workflow](.github/workflows/ios.yml) builds the app on macOS on every push.
 
 For Android, [docs/android.md](docs/android.md) does the same: installing on your own phone, Google
-Play's internal testing, and what the store listing still needs. The
+Play's testing tracks, and what the store listing still needs. The
 [Android workflow](.github/workflows/android.yml) builds the debug APK and the release app bundle
-on every push, and uploads the bundle to Google Play on request.
+on every push, and the [Google Play workflow](.github/workflows/play.yml) signs the bundle and
+uploads it to a testing track, through the Python in [`tools/`](tools).
 
 The tests cover the rules (opacity and scale bounds, reset, the divider) in `shared/`, and in
 `composeApp/src/desktopTest` the screen models and the whole flow on the desktop harness: choose,

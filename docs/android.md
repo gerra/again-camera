@@ -4,6 +4,15 @@ The Android app is the same Compose UI as iOS, in a single activity (`composeApp
 The camera is CameraX, the old photo comes through the system photo picker, saving goes through
 MediaStore, and sharing uses the system share sheet.
 
+- [What you need](#what-you-need)
+- [Install on your phone](#1-install-on-your-phone)
+- [Google Play](#2-google-play): [one-time setup](#one-time-setup),
+  [versions and version codes](#versions-and-version-codes),
+  [upload from GitHub Actions](#upload-from-github-actions), [upload by hand](#upload-by-hand),
+  [testers](#testers)
+- [The store listing](#3-the-store-listing)
+- [Troubleshooting](#troubleshooting)
+
 ## What you need
 
 - A **JDK 17+** and the **Android SDK** with platform 36: [Android Studio](https://developer.android.com/studio)
@@ -32,77 +41,125 @@ that build first.
 
 ## 2. Google Play
 
-### The app and the upload key
+### One-time setup
 
-1. In the Play Console › **Create app**: name **Again Camera: Then & Now**, default language
-   English, an app, free. The package name is `sh.gerra.again`, set by the first bundle uploaded,
-   and Play never lets it change afterwards.
-2. Make an **upload key**. Google Play signs the APKs it delivers with its own key (Play App
-   Signing, mandatory for new apps); the upload key only proves a bundle came from you, and Play
-   can reset it if it is lost.
+1. **The Play Console app.** Play Console › **Create app**: name **Again Camera: Then & Now**,
+   default language English, an app, free. The package name is `sh.gerra.again`, set by the
+   first bundle uploaded, and Play never lets it change afterwards. New apps are enrolled in
+   **Play App Signing**: Play keeps the key that signs what phones install, and the repository
+   only ever holds the **upload key** below, which Play checks uploads against.
+2. **The upload key.** On any machine with a JDK:
    ```bash
-   keytool -genkeypair -keystore again-upload.jks -alias upload -keyalg RSA -keysize 2048 -validity 10000
+   keytool -genkeypair -v -keystore upload.jks -alias upload -keyalg RSA -keysize 2048 -validity 10000
+   base64 -i upload.jks | pbcopy        # Linux: base64 -w0 upload.jks
    ```
-   Keep the file and its password out of the repository (`.gitignore` already leaves out `*.jks`).
-   With a modern `keytool` the key gets the keystore's password, which is what the build expects
-   by default.
-3. Sign the release bundle with it. Put the keystore in `~/.gradle/gradle.properties` so nothing
-   lands in the shell history:
-   ```
-   again.uploadKeystore=/Users/you/keys/again-upload.jks
-   again.uploadKeystorePassword=…
-   ```
-   (`again.uploadKeyAlias` and `again.uploadKeyPassword` too, when they are not `upload` and the
-   keystore's password.) Then:
-   ```bash
-   ./gradlew :composeApp:bundleRelease -Pagain.versionCode=1
-   ```
-   The bundle is `composeApp/build/outputs/bundle/release/composeApp-release.aab`. Without the
-   properties the same command builds it unsigned, which Play does not accept.
+   Keep `upload.jks` and its password somewhere safe outside the repository (`.gitignore`
+   already leaves out `*.jks`). With a modern `keytool` the key gets the keystore's password.
+   Play registers the upload key from the first bundle it receives; if the key is ever lost,
+   Play Console › **App integrity** has a form to reset it.
+3. **A service account** that may publish to the app:
+   - [Google Cloud console](https://console.cloud.google.com), any project › **IAM & Admin ›
+     Service accounts › Create**. Name it (e.g. `play-upload`), no roles. Then **Keys › Add key ›
+     JSON**; the file downloads once.
+   - **Google Play Android Developer API** enabled for the project (APIs & Services › Library).
+   - Play Console › **Users and permissions › Invite new users**, the service account's email
+     (`…@….iam.gserviceaccount.com`), with the app permissions **View app information**,
+     **Manage testing tracks and edit tester lists** and **Release to testing tracks**, on this
+     app only. With just those it can never promote a build further.
+4. **The first release.** Play lets the API upload only into an app that already has a release:
+   create the internal testing track's first release by hand in the console, with a bundle from
+   Android Studio (**Build › Generate Signed App Bundle**, the upload key above) or from
+   [`bundleRelease`](#upload-by-hand). Under App integrity keep **Google-generated key** for app
+   signing; the key the bundle is signed with becomes the app's upload key. Add yourself to the
+   testers, save, and **start rollout**: internal testing needs no review, and the app installs
+   through the Play Store within minutes.
+5. **The secrets**, under **Settings › Secrets and variables › Actions**. See
+   [Upload from GitHub Actions](#upload-from-github-actions) for the table.
 
-### The first release, by hand
+### Versions and version codes
 
-Play's publishing API only works for an app that already has a bundle, so the first one goes
-through the console:
+| Value | Where it comes from | Meaning |
+|-------|---------------------|---------|
+| `versionName` | `versionName` in [`composeApp/android.gradle`](../composeApp/android.gradle) | The version people see, `1.0`; raise it for each store release, with `MARKETING_VERSION` on the iOS side. |
+| `versionCode` | `-Pagain.versionCode`, which the Google Play workflow sets to its run number; `1` without it | Play refuses any upload whose code is not above every one it has seen. The run number only climbs. |
 
-1. Play Console › Testing › **Internal testing** › Create new release.
-2. Under App integrity, keep **Google-generated key** for app signing. Upload the `.aab`; the key
-   it is signed with becomes the app's upload key.
-3. Add yourself to the testers list, save, and **start rollout**. Internal testing needs no review:
-   the tester link works within minutes, and the app installs through the Play Store like any
-   other.
+A local `./gradlew :composeApp:assembleDebug` and the Android workflow's builds get code 1, which
+is fine for a phone over USB. An upload by hand needs a code above the last workflow run number.
 
-Each release needs a higher `versionCode` than the last; `versionName` (the version people see,
-`1.0`) is in `composeApp/android.gradle` and changes for each store release.
+### Upload from GitHub Actions
 
-### Releases from GitHub Actions
+The [Google Play workflow](../.github/workflows/play.yml) builds on a Linux runner, whose image
+has the Android SDK, signs the bundle with the upload key from the repository secrets, and sends
+it to a testing track with the service account through the Play Developer API. It runs from
+**Actions › Google Play › Run workflow**; the optional `build_number` box overrides the run number
+as the `versionCode`.
 
-With two repository secrets (Settings › Secrets and variables › Actions) the workflow signs the
-bundle with the upload key, and with a third it can upload it:
+**Until the secrets exist the job does nothing.** Its first step checks them, writes which are
+missing to the run summary and skips the rest. Add these five secrets:
 
-| Secret | Value |
-| --- | --- |
-| `ANDROID_UPLOAD_KEYSTORE` | The keystore in base64: `base64 again-upload.jks` |
-| `ANDROID_UPLOAD_KEYSTORE_PASSWORD` | Its password |
-| `PLAY_SERVICE_ACCOUNT_JSON` | A service account key, see below |
-| `ANDROID_UPLOAD_KEY_ALIAS` | Optional: only when the alias is not `upload` |
-| `ANDROID_UPLOAD_KEY_PASSWORD` | Optional: only when the key's password is not the keystore's |
+| Secret | What it is | How to get it |
+|--------|------------|---------------|
+| `ANDROID_UPLOAD_KEYSTORE_BASE64` | The upload keystore | `base64 -i upload.jks \| pbcopy` after the `keytool` line above. |
+| `ANDROID_UPLOAD_KEYSTORE_PASSWORD` | Its store password | Chosen when the key was generated. |
+| `ANDROID_UPLOAD_KEY_ALIAS` | The key's alias | `upload` in the line above. |
+| `ANDROID_UPLOAD_KEY_PASSWORD` | The key's password | Chosen when the key was generated; `keytool` defaults it to the store password. |
+| `PLAY_SERVICE_ACCOUNT_JSON` | The service account's key file, as is | The JSON downloaded when the key was created. Paste the whole file; line breaks are fine. |
 
-For the service account: in the [Google Cloud Console](https://console.cloud.google.com), IAM &
-Admin › Service Accounts › **Create service account**, then on it Keys › Add key › **JSON**; the
-downloaded file is the secret, whole. Then in the Play Console › Users and permissions › **Invite
-new users** with the account's email address, and give it, for this app only, **Release apps to
-testing tracks** and **View app information and download bulk reports**. With just those, the
-service account can never promote a build further.
+And one optional **variable**:
 
-Once the secrets are set, every push signs the bundle, and **Actions › Android › Run workflow**
-with **Upload the release bundle to Google Play** ticked sends it to internal testing, with the
-ProGuard mapping for readable crash reports. The `versionCode` is the workflow's run number, so it
-always goes up; the run's other box overrides it for a one-off build, for instance when a bundle
-uploaded by hand got ahead of it.
+| Variable | What it is |
+|----------|------------|
+| `PLAY_TRACK` | The track to release to; unset means `internal`. The first closed testing track is `alpha` in the API, whatever the console shows; a track created by hand goes by its own name. |
 
-Promoting to closed testing, open testing or production is done in the Play Console, after
-trying the build, under the release's **Promote release** menu.
+The steps are [`tools/play.py`](../tools/play.py), one command each, the way
+[gains](https://github.com/gerra/gains) ships: `check-secrets`, `paths`, `settings`,
+`install-signing`, `bundle`, `upload`, `cleanup`. The Play Developer API is called with the
+standard library, and `openssl` on the runner signs the service account's JWT, so nothing has to
+be installed. The parts that need no Google are tested by
+[`tools/test_play.py`](../tools/test_play.py), which the Android workflow runs on every push:
+
+```bash
+python3 -m unittest discover -s tools -p 'test_*.py'
+```
+
+Release builds are shrunk and obfuscated by R8 (`minifyEnabled` in `composeApp/android.gradle`),
+so the upload also sends R8's `mapping.txt` as the bundle's deobfuscation file, and Play Console's
+crash reports show the real class and method names. The bundle and its mapping file are kept as a
+run artifact (`play-bundle-<number>`) for 90 days, and the key material is removed from the runner
+at the end whether or not the upload worked.
+
+### Upload by hand
+
+A signed bundle from the command line, for the console's **Create new release** page:
+
+```bash
+./gradlew :composeApp:bundleRelease \
+  -Pagain.versionCode=1234 \
+  -Pagain.uploadKeystore=/path/to/upload.jks \
+  -Pagain.uploadKeystorePassword=… -Pagain.uploadKeyAlias=upload -Pagain.uploadKeyPassword=…
+# → composeApp/build/outputs/bundle/release/composeApp-release.aab
+# → composeApp/build/outputs/mapping/release/mapping.txt
+```
+
+The keystore properties can live in `~/.gradle/gradle.properties` instead, out of the shell
+history; the alias defaults to `upload` and the key password to the keystore's. Upload the
+mapping file with the bundle (the release's **App bundle explorer › Downloads › ReTrace mapping
+file**), or the crash reports for that version stay obfuscated.
+
+Without `again.uploadKeystore` the release bundle is unsigned, which is what Android Studio's
+**Build › Generate Signed App Bundle** expects: it signs with the key you point it at.
+
+### Testers
+
+- **Internal testing** (Play Console › Testing › Internal testing): up to 100 testers by email,
+  no review, builds available at once. The track's page has the **opt-in link** testers accept
+  before the app shows up for them in the Play Store.
+- **Closed testing** takes a list or a Google Group, and every upload reaches them without a
+  review; set `PLAY_TRACK` to `alpha` to send the workflow's builds there. A personal developer
+  account registered since November 2023 must run a closed test with at least **12 testers opted
+  in for 14 days in a row** before it can apply for production access, so start that track early.
+- Promoting a tested build to production is done in the console, under the release's
+  **Promote release** menu, never by the workflow.
 
 ## 3. The store listing
 
@@ -126,22 +183,22 @@ Still to do in the Play Console, under Grow › Store presence and Policy › Ap
   audience** (not designed for children), **Ads** (none), **App access** (no sign-in), **News** and
   **Government** apps (neither), **Health** (no).
 - **Category**: Photography.
-- A personal developer account registered since November 2023 must run a **closed test** with at
-  least 12 testers for 14 days before it can apply for production access; promote the internal
-  testing build to a closed track for that.
 - Then Production › Create new release, pick the tested bundle, and **Send for review**. The first
   review takes a few days.
 
 ## Troubleshooting
 
-- **"SDK location not found"**: install Android Studio or write `local.properties` as above.
-  Machines that only run the shared tests and the desktop harness can skip the SDK altogether with
-  `-Pagain.android=false`.
-- **"Version code N has already been used"** on upload: the bundle's `versionCode` is not above
-  the last one Play has. From the workflow, give the run a higher number in the `versionCode` box.
-- **"Only releases with status draft may be created on draft app"** from the workflow: the app
-  has not had its first release through the console yet (section 2).
-- **"The Android App Bundle was not signed"**: the `ANDROID_UPLOAD_KEYSTORE` secret is missing
-  or not base64, or a hand build ran without the `again.upload*` properties.
-- **The camera shows "can't be opened"** in the emulator: give the virtual device a camera under
-  its settings, or use a real phone.
+| Symptom | Cause and fix |
+|---------|---------------|
+| **"SDK location not found"** locally | Install Android Studio or write `local.properties` as above. Machines that only run the shared tests and the desktop harness can skip the SDK altogether with `-Pagain.android=false`. |
+| The run summary says *Play upload skipped* | One of the five secrets is missing or empty. The summary names it. |
+| `POST …/edits answered 401` | The service account key does not match the account, or the file in `PLAY_SERVICE_ACCOUNT_JSON` is not a service account key. Create a new key and paste the whole JSON. |
+| `POST …/edits answered 403: The caller does not have permission` | The service account is not invited to the app in Play Console, or lacks *Release to testing tracks*. Permissions can take a few minutes to apply after inviting. |
+| `… answered 404: Package not found` | No app with the package name exists in Play Console yet, or it has never had a release; the first one is created by hand ([One-time setup](#one-time-setup), step 4). |
+| `… answered 400: Version code N has already been used` | The upload's version code is not above every earlier one. The run number only climbs, so this happens after an upload by hand got ahead of it: pass a higher `build_number` to the run. |
+| `… answered 400: … signed with a key that is not the upload key` | The keystore in the secret is not the key Play registered from the first upload. Use the same `upload.jks`, or reset the upload key under App integrity. |
+| `… answered 404: Track not found` | `PLAY_TRACK` names a track that does not exist. The first closed track is `alpha`; a custom one goes by its own name. |
+| `bundleRelease` fails with R8 *Missing class* | A library references a class nothing ships. `composeApp/build/outputs/mapping/release/missing_rules.txt` holds the `-dontwarn` lines R8 asks for; copy only those into `composeApp/proguard-rules.pro`, with a comment naming the library. The Android workflow catches this on the push. |
+| The release build crashes where the debug build doesn't | R8 removed or renamed something reached by reflection: a missing keep rule in `composeApp/proguard-rules.pro`. The mapping file turns the stack trace back into names (`retrace` in the SDK's `cmdline-tools`). |
+| The upload succeeds but testers see nothing | Play processes a bundle for minutes to hours, and testers must have accepted the opt-in link. Check the track's page in the console. |
+| The camera shows "can't be opened" in the emulator | Give the virtual device a camera under its settings, or use a real phone. |

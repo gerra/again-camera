@@ -1,9 +1,10 @@
 name: Android
 
-# Builds the Android app on every push: the debug APK for a phone, and in Release the app bundle
-# Google Play gets. Signed with the upload key when the repository's secrets hold it, unsigned
-# otherwise; "Run workflow" can then send the bundle to Google Play's internal testing track.
-# docs/android.md has the secrets and the Play Console side.
+# Builds the Android app on every push, as the iOS workflow does on macOS: the shared rules
+# and the app's screens on the desktop harness, the debug APK for a phone, and in Release
+# the app bundle Google Play takes, unsigned, so an R8 failure shows here rather than in the
+# Google Play workflow. Both are kept as the run's artifact. Signing and the upload are
+# play.yml, whose Python is tested here too (docs/android.md).
 on:
   push:
     paths:
@@ -12,32 +13,27 @@ on:
       - "gradle/**"
       - "*.gradle.kts"
       - "gradle.properties"
+      - "tools/**"
       - ".github/workflows/android.yml"
+      - ".github/workflows/play.yml"
   workflow_dispatch:
-    inputs:
-      publish:
-        description: "Upload the release bundle to Google Play (internal testing)"
-        type: boolean
-        default: false
-      versionCode:
-        description: "versionCode of this build (empty: the run number)"
-        type: string
-        required: false
 
 concurrency:
   group: android-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  # The Python behind the Google Play workflow needs no JDK and takes seconds.
+  scripts:
+    name: Script tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 -m unittest discover -s tools -p 'test_*.py'
+
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    env:
-      # Google Play wants every upload's versionCode above the last one's; the run number only
-      # ever goes up.
-      AGAIN_VERSION_CODE: ${{ inputs.versionCode || github.run_number }}
-      # A step's `if` cannot read secrets, so whether the Play one is set is decided here.
-      HAS_PLAY_SERVICE_ACCOUNT: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON != '' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -52,62 +48,15 @@ jobs:
         run: ./gradlew :shared:desktopTest :composeApp:desktopTest
 
       - name: App for a phone (Debug)
-        run: ./gradlew :composeApp:assembleDebug -Pagain.versionCode="$AGAIN_VERSION_CODE"
+        run: ./gradlew :composeApp:assembleDebug
 
-      # The secret is the keystore in base64 (docs/android.md). The file lives outside the checkout
-      # and only for this job.
-      - name: Upload key
-        env:
-          KEYSTORE_BASE64: ${{ secrets.ANDROID_UPLOAD_KEYSTORE }}
-          PUBLISH: ${{ inputs.publish }}
-        run: |
-          if [ -n "$KEYSTORE_BASE64" ]; then
-            printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/upload.jks"
-            echo "UPLOAD_KEYSTORE=$RUNNER_TEMP/upload.jks" >> "$GITHUB_ENV"
-            echo "Release bundle signed with the upload key."
-          elif [ "$PUBLISH" = "true" ]; then
-            echo "::error::Publishing needs the ANDROID_UPLOAD_KEYSTORE secret (see docs/android.md)."
-            exit 1
-          else
-            echo "No ANDROID_UPLOAD_KEYSTORE secret: the release bundle is unsigned."
-          fi
-          if [ "$PUBLISH" = "true" ] && [ "$HAS_PLAY_SERVICE_ACCOUNT" != "true" ]; then
-            echo "::error::Publishing needs the PLAY_SERVICE_ACCOUNT_JSON secret (see docs/android.md)."
-            exit 1
-          fi
-
-      # With no keystore every signing property is empty and the build stays unsigned.
-      - name: App bundle for Google Play (Release)
-        env:
-          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEY_PASSWORD }}
-        run: >
-          ./gradlew :composeApp:bundleRelease
-          -Pagain.versionCode="$AGAIN_VERSION_CODE"
-          -Pagain.uploadKeystore="$UPLOAD_KEYSTORE"
-          -Pagain.uploadKeystorePassword="$KEYSTORE_PASSWORD"
-          -Pagain.uploadKeyAlias="$KEY_ALIAS"
-          -Pagain.uploadKeyPassword="$KEY_PASSWORD"
+      - name: App bundle for Google Play (Release, unsigned)
+        run: ./gradlew :composeApp:bundleRelease
 
       - uses: actions/upload-artifact@v4
         with:
-          name: again-android-${{ env.AGAIN_VERSION_CODE }}
+          name: again-android-${{ github.run_number }}
           if-no-files-found: error
           path: |
             composeApp/build/outputs/apk/debug/*.apk
             composeApp/build/outputs/bundle/release/*.aab
-            composeApp/build/outputs/mapping/release/mapping.txt
-
-      # Only from "Run workflow" with the box ticked, and only to internal testing: promoting a
-      # build to production is done in the Play Console, after trying it.
-      - name: Google Play, internal testing
-        if: inputs.publish
-        uses: r0adkll/upload-google-play@v1
-        with:
-          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
-          packageName: sh.gerra.again
-          releaseFiles: composeApp/build/outputs/bundle/release/composeApp-release.aab
-          mappingFile: composeApp/build/outputs/mapping/release/mapping.txt
-          tracks: internal
-          status: completed
