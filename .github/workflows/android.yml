@@ -1,12 +1,28 @@
 name: Android
 
-# Builds the Android app on every push, as the iOS workflow does on macOS: the shared rules
-# and the app's screens on the desktop harness, the debug APK for a phone, and in Release
-# the app bundle Google Play takes, unsigned, so an R8 failure shows here rather than in the
-# Google Play workflow. Both are kept as the run's artifact. Signing and the upload are
-# play.yml, whose Python is tested here too (docs/android.md).
+# Builds the Android app, as the iOS workflow does on macOS: the shared rules and the app's
+# screens on the desktop harness, the debug APK for a phone, lint, and in Release the app
+# bundle Google Play takes, unsigned, so an R8 failure shows here rather than in the Google
+# Play workflow. The APK and the bundle are kept as the run's artifact. Signing and the upload
+# are play.yml, whose Python is tested here too (docs/android.md).
+#
+# On every pull request, built as the merge it would make, and on main once it is merged, so
+# main stays buildable; a push to any other branch runs it from "Run workflow". Path-filtered,
+# so it must not be a required check: a pull request that skips it would wait on it forever.
 on:
   push:
+    branches: [main]
+    paths:
+      - "composeApp/**"
+      - "shared/**"
+      - "gradle/**"
+      - "*.gradle.kts"
+      - "gradle.properties"
+      - "tools/**"
+      - ".github/workflows/android.yml"
+      - ".github/workflows/play.yml"
+  # The same list: tools/test_play.py checks that the two stay equal.
+  pull_request:
     paths:
       - "composeApp/**"
       - "shared/**"
@@ -18,9 +34,11 @@ on:
       - ".github/workflows/play.yml"
   workflow_dispatch:
 
+# A newer push to the same pull request makes the older build moot; a build of main is never
+# cut short, so every merge has its result.
 concurrency:
   group: android-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   # The Python behind the Google Play workflow needs no JDK and takes seconds.
@@ -50,6 +68,10 @@ jobs:
       - name: App for a phone (Debug)
         run: ./gradlew :composeApp:assembleDebug
 
+      # Lint errors fail the build (composeApp/android.gradle); warnings only show in the report.
+      - name: Android lint
+        run: ./gradlew :composeApp:lintDebug
+
       - name: App bundle for Google Play (Release, unsigned)
         run: ./gradlew :composeApp:bundleRelease
 
@@ -60,3 +82,14 @@ jobs:
           path: |
             composeApp/build/outputs/apk/debug/*.apk
             composeApp/build/outputs/bundle/release/*.aab
+
+      # On a lint error the report says which; on an R8 "Missing class" failure,
+      # missing_rules.txt holds the -dontwarn lines it asks for.
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: android-reports
+          path: |
+            composeApp/build/reports/lint-results-debug.*
+            composeApp/build/outputs/mapping/release/missing_rules.txt
+          if-no-files-found: ignore

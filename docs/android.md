@@ -33,7 +33,8 @@ MediaStore, and sharing uses the system share sheet.
    Or open the repository in Android Studio, choose the phone at the top of the window, and press
    **Run**.
 
-Without a cable: every push builds a debug APK in the [Android workflow](../.github/workflows/android.yml).
+Without a cable: every pull request and every merge into main builds a debug APK in the
+[Android workflow](../.github/workflows/android.yml).
 Open the run under **Actions**, download the `again-android-<n>` artifact, copy the `.apk` to the
 phone and open it; Android asks once to allow installs from that app. Each run signs its APK with
 a debug key of its own, so when the phone refuses to install one over an earlier build, uninstall
@@ -116,7 +117,7 @@ The steps are [`tools/play.py`](../tools/play.py), one command each, the way
 `install-signing`, `bundle`, `upload`, `cleanup`. The Play Developer API is called with the
 standard library, and `openssl` on the runner signs the service account's JWT, so nothing has to
 be installed. The parts that need no Google are tested by
-[`tools/test_play.py`](../tools/test_play.py), which the Android workflow runs on every push:
+[`tools/test_play.py`](../tools/test_play.py), which the Android workflow runs on every pull request:
 
 ```bash
 python3 -m unittest discover -s tools -p 'test_*.py'
@@ -198,7 +199,7 @@ Still to do in the Play Console, under Grow › Store presence and Policy › Ap
 | `… answered 400: Version code N has already been used` | The upload's version code is not above every earlier one. The run number only climbs, so this happens after an upload by hand got ahead of it: pass a higher `build_number` to the run. |
 | `… answered 400: … signed with a key that is not the upload key` | The keystore in the secret is not the key Play registered from the first upload. Use the same `upload.jks`, or reset the upload key under App integrity. |
 | `… answered 404: Track not found` | `PLAY_TRACK` names a track that does not exist. The first closed track is `alpha`; a custom one goes by its own name. |
-| `bundleRelease` fails with R8 *Missing class* | A library references a class nothing ships. `composeApp/build/outputs/mapping/release/missing_rules.txt` holds the `-dontwarn` lines R8 asks for; copy only those into `composeApp/proguard-rules.pro`, with a comment naming the library. The Android workflow catches this on the push. |
+| `bundleRelease` fails with R8 *Missing class* | A library references a class nothing ships. `composeApp/build/outputs/mapping/release/missing_rules.txt` holds the `-dontwarn` lines R8 asks for; copy only those into `composeApp/proguard-rules.pro`, with a comment naming the library. The Android workflow catches this on the pull request. |
 | The release build crashes where the debug build doesn't | R8 removed or renamed something reached by reflection: a missing keep rule in `composeApp/proguard-rules.pro`. The mapping file turns the stack trace back into names (`retrace` in the SDK's `cmdline-tools`). |
 | The upload succeeds but testers see nothing | Play processes a bundle for minutes to hours, and testers must have accepted the opt-in link. Check the track's page in the console. |
 | The camera shows "can't be opened" in the emulator | Give the virtual device a camera under its settings, or use a real phone. |

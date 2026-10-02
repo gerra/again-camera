@@ -25,6 +25,21 @@ import play
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 WORKFLOW = ROOT / ".github/workflows/play.yml"
 ANDROID_WORKFLOW = ROOT / ".github/workflows/android.yml"
+IOS_WORKFLOW = ROOT / ".github/workflows/ios.yml"
+
+
+def trigger_paths(workflow_text):
+    """The `paths:` lists of a workflow's triggers, in order, without a YAML parser."""
+    lists, current = [], None
+    for line in workflow_text.splitlines():
+        if line.strip() == "paths:":
+            current = []
+            lists.append(current)
+        elif current is not None and line.startswith("      - "):
+            current.append(line.strip()[2:].strip('"'))
+        elif current is not None and not line.startswith("      #"):
+            current = None
+    return lists
 
 
 def decode(segment):
@@ -288,11 +303,28 @@ class WorkflowTest(unittest.TestCase):
         self.assertIn("${{ env.BUNDLE_PATH }}", keep)
         self.assertIn("${{ env.MAPPING_PATH }}", keep)
 
-    def test_the_android_workflow_runs_these_tests_on_every_push(self):
+    def test_the_android_workflow_runs_these_tests(self):
         workflow = ANDROID_WORKFLOW.read_text()
         self.assertIn("python3 -m unittest discover -s tools -p 'test_*.py'", workflow)
         for path in ("tools/**", ".github/workflows/play.yml"):
             self.assertIn(f'- "{path}"', workflow)
+
+    def test_the_build_workflows_watch_the_same_paths_on_main_and_on_pull_requests(self):
+        for workflow in (ANDROID_WORKFLOW, IOS_WORKFLOW):
+            with self.subTest(workflow=workflow.name):
+                text = workflow.read_text()
+                self.assertIn("branches: [main]", text)
+                self.assertIn("pull_request:", text)
+                on_push, on_pull_request = trigger_paths(text)
+                self.assertTrue(on_push)
+                self.assertEqual(on_push, on_pull_request)
+                self.assertIn(f".github/workflows/{workflow.name}", on_push)
+
+    def test_the_play_workflow_only_runs_by_hand(self):
+        triggers = WORKFLOW.read_text().split("jobs:", 1)[0]
+        self.assertIn("workflow_dispatch:", triggers)
+        for event in ("push:", "pull_request:", "schedule:"):
+            self.assertNotIn(event, triggers)
 
 
 if __name__ == "__main__":
