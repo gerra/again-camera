@@ -24,6 +24,7 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -33,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,6 +43,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
+import sh.gerra.again.Links
 import sh.gerra.again.domain.ReferencePhoto
 import sh.gerra.again.platform.Photos
 import sh.gerra.again.platform.PickResult
@@ -147,6 +150,25 @@ internal fun HomeScreen(photos: Photos, onPicked: (ReferencePhoto) -> Unit) {
             Step(2, Res.string.home_step_align)
             Step(3, Res.string.home_step_take)
         }
+
+        Spacer(Modifier.height(32.dp))
+        PrivacyLink()
+    }
+}
+
+/**
+ * The privacy policy on the app's site, opened in the browser: the stores want it reachable from
+ * inside the app too. The browser does the fetching, so the app still needs no internet access.
+ */
+@Composable
+private fun PrivacyLink() {
+    val uriHandler = LocalUriHandler.current
+    TextButton(
+        // A phone with no browser has nothing to open it in; the button then does nothing.
+        onClick = { runCatching { uriHandler.openUri(Links.PRIVACY_POLICY) } },
+        modifier = Modifier.heightIn(min = 48.dp),
+    ) {
+        Text(stringResource(Res.string.home_privacy), style = MaterialTheme.typography.bodyLarge)
     }
 }
 

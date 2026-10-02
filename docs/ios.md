@@ -78,9 +78,9 @@ Still to do in App Store Connect:
 - **Category**: Photo & Video.
 - **Screenshots**: 6.9" iPhone (1320 × 2868) are required; 13" iPad (2064 × 2752) too, since the app
   runs on iPad. Take them in the simulator with ⌘S.
-- **Privacy policy URL**: required for every app. The Privacy section of the README works as the
-  text; host it somewhere public (a GitHub Pages page, or the README's own URL).
-- **Support URL**: e.g. the repository's Issues page.
+- **Privacy policy URL**: `https://again.gerra.sh/privacy`, once [the site](site.md) is deployed.
+  The app links to it from its home screen too.
+- **Support URL**: `https://again.gerra.sh/support`.
 - Description, keywords and a subtitle, then pick the TestFlight build and **Submit for Review**.
 
 ## Troubleshooting

@@ -172,14 +172,15 @@ Already in the project:
 - A launcher icon with an adaptive background, and **English and Russian** with per-app language
   settings (`locales_config.xml`).
 - `targetSdk` 36, which meets Play's target API level requirement.
+- A **privacy policy** on [again.gerra.sh](site.md), linked from the app's home screen as Play
+  requires.
 
 Still to do in the Play Console, under Grow › Store presence and Policy › App content:
 
 - **Store listing**: short and full descriptions, a 512 × 512 icon, a 1024 × 500 feature graphic,
   and at least two phone screenshots (16:9 or 9:16, 320 to 3840 px on each side). Tablet
   screenshots too, since the app runs on tablets.
-- **Privacy policy URL**: required for every app. The Privacy section of the README works as the
-  text; host it somewhere public (a GitHub Pages page, or the README's own URL).
+- **Privacy policy URL**: `https://again.gerra.sh/privacy`, once [the site](site.md) is deployed.
 - **Data safety**, **Content rating** (the questionnaire; the app has no user content), **Target
   audience** (not designed for children), **Ads** (none), **App access** (no sign-in), **News** and
   **Government** apps (neither), **Health** (no).

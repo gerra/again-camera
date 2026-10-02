@@ -10,6 +10,7 @@
     <string name="home_step_align">Stand where it was taken and line it up</string>
     <string name="home_step_take">Take it again</string>
     <string name="photo_unreadable">That photo couldn't be opened. Please choose another one.</string>
+    <string name="home_privacy">Privacy policy</string>
 
     <!-- Camera -->
     <string name="camera_change_photo">Change photo</string>

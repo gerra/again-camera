@@ -10,6 +10,7 @@
     <string name="home_step_align">Встаньте там, где его сняли, и совместите</string>
     <string name="home_step_take">Снимите снова</string>
     <string name="photo_unreadable">Не удалось открыть это фото. Пожалуйста, выберите другое.</string>
+    <string name="home_privacy">Политика конфиденциальности</string>
 
     <!-- Camera -->
     <string name="camera_change_photo">Сменить фото</string>

@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Privacy policy — Again</title>
+  <meta name="description" content="Again collects nothing: your photos stay on your device unless you share them. What the app keeps on the phone, and for how long.">
+  <meta name="theme-color" content="#0d0d0d">
+  <link rel="icon" href="/img/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header class="wrap top">
+    <a class="brand" href="/"><img src="/img/logo.png" alt="" width="36" height="36">Again</a>
+    <nav>
+      <a href="/privacy" aria-current="page">Privacy</a>
+      <a href="/support">Support</a>
+    </nav>
+  </header>
+
+  <!--
+    Keep this page true to the app. It says the same as the README's Privacy section,
+    iosApp/iosApp/PrivacyInfo.xcprivacy ("no data collected"), the App Store's "Data Not
+    Collected" and Google Play's Data safety answers (all "No"). A change to any of them, or a
+    new permission in composeApp/src/androidMain/AndroidManifest.xml or iosApp/iosApp/Info.plist,
+    changes this page and its date. The app links here: composeApp/.../Links.kt.
+  -->
+  <main class="wrap narrow doc">
+    <h1>Privacy policy</h1>
+    <p class="updated">Last updated 2 October 2026</p>
+
+    <div class="summary">
+      <p><strong>The short version.</strong> Again collects no data. Your photos stay on your
+        device unless you choose to share them. There is no account, no server, no analytics,
+        no ads, no tracking and no third-party SDKs, and we never see your photos.</p>
+    </div>
+
+    <h2 id="who">Who we are</h2>
+    <p>Again (on the stores as "Again Camera: Then &amp; Now") is an independent app, built by
+      one developer. "We" on this page means the people who make Again. Questions about this
+      policy go to <a href="mailto:again@gerra.sh">again@gerra.sh</a>.</p>
+
+    <h2 id="collect">What we collect</h2>
+    <p>Nothing. Again has no server and makes no network connections of its own. The Android
+      app doesn't even have permission to use the internet. No photo, no setting and nothing
+      about how you use the app is ever sent to us or to anyone else.</p>
+    <p>The "Privacy policy" link in the app opens this page in your browser, which then
+      connects to this website like any other.</p>
+
+    <h2 id="device">What stays on your device</h2>
+    <ul>
+      <li><strong>The camera.</strong> Again uses the camera only while its camera screen is
+        open, to show the viewfinder and take the photo you ask for. It asks your permission
+        first.</li>
+      <li><strong>The old photo.</strong> You choose it with the system photo picker, which
+        hands Again only that one photo: the app can't see the rest of your library. Again keeps
+        a private copy of the last old photo you chose, so that "Continue with this photo" works
+        next time. Choosing another replaces it.</li>
+      <li><strong>New photos.</strong> A new photo waits in the app's temporary storage until
+        you save or share it. Photos you don't save are deleted the next time Again starts.</li>
+      <li><strong>Saving.</strong> Save adds the new photo to your gallery: on Android to
+        Pictures › Again, on iPhone and iPad to your photo library, after asking permission to
+        add photos. Again can add to the library but not read it.</li>
+      <li><strong>Location.</strong> Again doesn't ask for your location and doesn't add it to
+        the photos it takes. The private copy of the old photo keeps whatever details the
+        original file had, such as where it was taken, and stays on the device with it.</li>
+    </ul>
+    <p>If your device's own backups are on (Google's backup on Android, iCloud on iPhone and
+      iPad), they can include the app's private copy of the last old photo, under Google's or
+      Apple's terms. Deleting Again deletes its storage from the device. Photos you saved stay
+      in your gallery.</p>
+
+    <h2 id="sharing">Sharing</h2>
+    <p>Share opens your device's share sheet. The photo goes only to the app or person you pick
+      there, and that app's own privacy policy covers what happens to it next. Again shares
+      nothing by itself.</p>
+
+    <h2 id="stores">Google Play and the App Store</h2>
+    <p>You get Again through Google Play or the App Store, under Google's or Apple's own terms
+      and privacy policies. If you allowed your device to share diagnostics with app developers,
+      they may show us anonymous statistics and crash reports for Again, such as how many
+      devices it is installed on, or the device model and system version where it crashed.
+      Those come from Google and Apple, not from the app, and contain none of your photos.</p>
+
+    <h2 id="rights">Your rights</h2>
+    <p>Because we hold no data about you, there is nothing for us to give you a copy of,
+      correct or delete. Your photos are in your gallery and in the app's storage on your
+      device, where you control them. If you have a question or a concern, email
+      <a href="mailto:again@gerra.sh">again@gerra.sh</a> and we'll answer within 30 days. If
+      you are in the EU or the UK, you can also complain to your data protection
+      authority.</p>
+
+    <h2 id="children">Children</h2>
+    <p>Again is a general-audience app and isn't directed at children under 13. It collects no
+      data from anyone, children included.</p>
+
+    <h2 id="changes">Changes</h2>
+    <p>If this policy changes, we'll update it here and change the date at the top. If Again
+      ever starts collecting anything, this page will say so before the version of the app that
+      does it is released.</p>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <span>Again · <a href="mailto:again@gerra.sh">again@gerra.sh</a></span>
+      <nav>
+        <a href="/privacy">Privacy policy</a>
+        <a href="/support">Support</a>
+        <a href="https://github.com/gerra/again-camera">Source on GitHub</a>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>

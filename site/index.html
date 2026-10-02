@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Again — take it again</title>
+  <meta name="description" content="A simple camera for recreating an old photograph from the exact same spot: the old photo floats over the live camera, you line the two up, and take the new one.">
+  <meta name="theme-color" content="#0d0d0d">
+  <meta property="og:title" content="Again">
+  <meta property="og:description" content="Pick a memory. Stand where it happened. Take it again.">
+  <meta property="og:image" content="https://again.gerra.sh/img/logo.png">
+  <meta property="og:url" content="https://again.gerra.sh/">
+  <link rel="icon" href="/img/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header class="wrap top">
+    <a class="brand" href="/"><img src="/img/logo.png" alt="" width="36" height="36">Again</a>
+    <nav>
+      <a href="/privacy">Privacy</a>
+      <a href="/support">Support</a>
+    </nav>
+  </header>
+
+  <main class="wrap">
+    <div class="hero">
+      <div>
+        <p class="eyebrow">Camera · Android and iPhone</p>
+        <h1>Pick a memory. <span>Take it again.</span></h1>
+        <p>A simple camera for recreating an old photograph from the exact same spot. The old
+          photo floats over the live camera, you line the two up, and take the new one.</p>
+        <div class="actions">
+          <a class="button primary" href="#how">See how it works</a>
+          <a class="button secondary" href="https://github.com/gerra/again-camera">Source on GitHub</a>
+          <!-- Store links go here once the apps are live:
+          <a class="button secondary" href="https://play.google.com/store/apps/details?id=sh.gerra.again">Google Play</a>
+          <a class="button secondary" href="https://apps.apple.com/app/idXXXXXXXXXX">App Store</a>
+          -->
+        </div>
+        <p class="note">Coming to Google Play and the App Store.</p>
+      </div>
+      <!-- The pictures are docs/screenshots (ScreenshotTest), as WebP at 600 px wide:
+           convert docs/screenshots/<name>.png -resize 600x -quality 85 site/img/<name>.webp -->
+      <img class="hero-phone" src="/img/shot-compare.webp" alt="Then and now in one frame, split by a divider to drag across" width="600" height="1299">
+    </div>
+
+    <section id="how">
+      <h2>Stand where it happened</h2>
+      <p class="lead">Choose an old photo, find the spot, and let the camera help you line it
+        up.</p>
+      <ul class="features">
+        <li><strong>The old photo over the camera</strong>
+          <span>Half see-through, in a frame shaped like it. Pinch, drag and twist it into line;
+            a slider sets how strongly it shows.</span></li>
+        <li><strong>A clean photograph</strong>
+          <span>The old photo is a guide on the screen and never ends up in the new one.</span></li>
+        <li><strong>Then and now</strong>
+          <span>Both in one frame, split by a divider to drag across.</span></li>
+        <li><strong>Selfies too</strong>
+          <span>The selfie camera is a mirror, as people expect, and so is its photo: what you
+            lined up is what you get.</span></li>
+        <li><strong>Save, share or retake</strong>
+          <span>Retake keeps the old photo lined up where you left it.</span></li>
+        <li><strong>Private by design</strong>
+          <span>No account, no server, no analytics, no ads. Your photos stay on your phone
+            (<a href="/privacy">privacy</a>).</span></li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>A look inside</h2>
+      <p class="lead">In English and Russian, with large controls, words next to every icon and
+        screen-reader labels throughout.</p>
+      <ul class="shots">
+        <li><img src="/img/shot-home.webp" alt="Home, with the last old photo one tap from the camera" width="600" height="1299" loading="lazy"></li>
+        <li><img src="/img/shot-camera.webp" alt="The old photo over the live camera, with the opacity slider" width="600" height="1299" loading="lazy"></li>
+        <li><img src="/img/shot-saved.webp" alt="Then and now, saved to the gallery" width="600" height="1299" loading="lazy"></li>
+        <li><img src="/img/shot-permission.webp" alt="Asking for the camera: your photos stay on this phone" width="600" height="1299" loading="lazy"></li>
+      </ul>
+      <p class="note">Screens from the app, with a drawn scene standing in for the camera and a
+        sepia copy of it for the old photo.</p>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <span>Again · <a href="mailto:again@gerra.sh">again@gerra.sh</a></span>
+      <nav>
+        <a href="/privacy">Privacy policy</a>
+        <a href="/support">Support</a>
+        <a href="https://github.com/gerra/again-camera">Source on GitHub</a>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>

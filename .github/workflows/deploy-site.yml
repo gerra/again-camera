@@ -1,0 +1,54 @@
+name: Deploy site
+
+# Ships again.gerra.sh to the Hetzner box on a push to main that touches it, the way gerra/gains
+# ships gains.gerra.sh: first the nginx vhost in deploy/nginx/ (copied, `nginx -t`, reloaded),
+# then site/, the static pages (landing page, privacy policy, support), rsynced into
+# /var/www/again.gerra.sh, then a smoke test of https://again.gerra.sh/privacy. Nothing to build.
+# Google Play, the App Store and the app itself link to that privacy policy.
+#
+# Until the DEPLOY_* secrets exist the job checks them, says so in the run summary and does
+# nothing else. One-time setup (DNS, the certificate, the secrets): docs/site.md
+on:
+  push:
+    branches: [main]
+    paths:
+      - "site/**"
+      - "deploy/nginx/**"
+      - "tools/deploy_site.py"
+      - "tools/gha.py"
+      - ".github/workflows/deploy-site.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-site
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Push nginx and site/ to the box
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the pages and the deploy script
+        run: python3 -m unittest discover -s tools -p 'test_deploy_site.py'
+
+      # Every later step is skipped while a secret is missing; the summary says which.
+      - name: Check secrets
+        id: secrets
+        run: python3 tools/deploy_site.py check-secrets
+
+      # The vhost only needs its certificate to exist, not the pages, so it goes first and the
+      # smoke test at the end of `site` sees the finished result.
+      - name: Push the nginx vhost and reload
+        if: steps.secrets.outputs.configured == 'true'
+        run: python3 tools/deploy_site.py nginx
+
+      - name: Rsync the pages to the box and smoke test
+        if: steps.secrets.outputs.configured == 'true'
+        run: python3 tools/deploy_site.py site

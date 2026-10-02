@@ -12,7 +12,7 @@
   <img alt="Platforms: Android, iOS" src="https://img.shields.io/badge/platforms-Android_·_iOS-0D0D0D">
 </p>
 
-On the stores as **Again Camera: Then & Now**.
+On the stores as **Again Camera: Then & Now**, and on the web at [again.gerra.sh](https://again.gerra.sh).
 
 <p align="center">
   <img src="docs/screenshots/05-home-returning.png" alt="Home, with the last old photo" width="24%">
@@ -77,6 +77,9 @@ composeApp/    Compose Multiplatform UI and the platform boundary.
   skikoMain/     Photo decoding with EXIF orientation, shared by the desktop and iOS
   desktopMain/   Development harness: the whole app with a drawn scene for a camera
 iosApp/        The SwiftUI wrapper and Xcode project.
+site/          again.gerra.sh: the landing page, the privacy policy and the support page.
+deploy/nginx/  The site's nginx vhost.
+tools/         The Python behind the Google Play and site workflows.
 ```
 
 The shared UI knows the camera only through two small interfaces in `composeApp/.../platform`:
@@ -96,7 +99,7 @@ needs the Android SDK 36; iOS needs Xcode on a Mac.
 ./gradlew :composeApp:run -Pagain.android=false      # desktop harness, with a fake camera
 ./gradlew :shared:desktopTest :composeApp:desktopTest -Pagain.android=false   # tests
 ./gradlew :composeApp:desktopTest --tests '*ScreenshotTest' -Pagain.android=false -Pagain.screenshotDir=docs/screenshots
-python3 -m unittest discover -s tools -p 'test_*.py'      # the Google Play scripts
+python3 -m unittest discover -s tools -p 'test_*.py'      # the Google Play and site scripts
 ```
 
 The screenshot one retakes the screenshots above.
@@ -112,6 +115,11 @@ Play's testing tracks, and what the store listing still needs. The
 on every pull request and on main, and the [Google Play workflow](.github/workflows/play.yml) signs the bundle and
 uploads it to a testing track, through the Python in [`tools/`](tools).
 
+The privacy policy and support page the stores link to are the app's own site,
+[again.gerra.sh](https://again.gerra.sh), static pages in [`site/`](site) that the
+[Deploy site workflow](.github/workflows/deploy-site.yml) puts online. [docs/site.md](docs/site.md)
+has the one-time setup.
+
 The tests cover the rules (opacity and scale bounds, reset, the divider) in `shared/`, and in
 `composeApp/src/desktopTest` the screen models and the whole flow on the desktop harness: choose,
 line up, take, compare, save, share, retake, a selfie through the front camera, with a failed
@@ -120,7 +128,8 @@ capture, a refused camera and a file that is not a photo.
 ## Privacy
 
 Again does not upload photos anywhere. Reference and captured photos remain on the device unless the
-user explicitly shares them.
+user explicitly shares them. The full privacy policy is at
+[again.gerra.sh/privacy](https://again.gerra.sh/privacy), linked from the app's home screen.
 
 - It works fully offline; the Android app does not even ask for internet access.
 - The only permission it asks for is the camera (and, on iOS, adding to the photo library when you

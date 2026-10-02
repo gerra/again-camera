@@ -1,6 +1,9 @@
 package sh.gerra.again
 
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ExperimentalTestApi
@@ -13,6 +16,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.pinch
@@ -200,6 +204,27 @@ class AppFlowTest {
         onNodeWithText("Continue with this photo").performClick()
         waitUntilExactlyOneExists(hasContentDescription("Take photo") and isEnabled(), 5_000)
         assertTrue(navigator.current.screen is Screen.Camera)
+    }
+
+    @Test
+    fun thePrivacyPolicyOpensInTheBrowser() = runComposeUiTest {
+        val opened = mutableListOf<String>()
+        val browser = object : UriHandler {
+            override fun openUri(uri: String) {
+                opened += uri
+            }
+        }
+        val navigator = Navigator()
+        setContent {
+            CompositionLocalProvider(LocalUriHandler provides browser) {
+                App(DesktopPhotos(home = File(dir, "privacy"), pickFile = { null }), TestCamera(), navigator)
+            }
+        }
+
+        onNodeWithText("Privacy policy").performScrollTo().performClick()
+        // The site's page (site/privacy.html), in the browser; the app stays where it was.
+        assertEquals(listOf("https://again.gerra.sh/privacy"), opened)
+        assertEquals(Screen.Home, navigator.current.screen)
     }
 
     private fun isEnabled() = SemanticsMatcher.keyNotDefined(SemanticsProperties.Disabled)
