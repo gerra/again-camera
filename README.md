@@ -77,7 +77,9 @@ and iOS an `AVCaptureSession` behind the same two.
 
 ## Build from source
 
-JDK 17+. Android needs the Android SDK 36; iOS needs Xcode on a Mac.
+JDK 17+, and on an Apple Silicon Mac an arm64 one: under an x86_64 JDK (Rosetta 2) the Kotlin
+plugin takes the host for an Intel Mac, so the build stops and says which JDK to change. Android
+needs the Android SDK 36; iOS needs Xcode on a Mac.
 
 ```bash
 ./gradlew :composeApp:installDebug                   # Android, onto a connected phone
