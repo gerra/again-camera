@@ -6,6 +6,8 @@ import android.content.pm.PackageManager
 import android.hardware.display.DisplayManager
 import android.net.Uri
 import android.provider.Settings
+import android.util.Log
+import android.util.Size
 import android.view.View
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
@@ -15,6 +17,8 @@ import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.Preview as PreviewUseCase
 import androidx.camera.core.UseCaseGroup
+import androidx.camera.core.resolutionselector.ResolutionSelector
+import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.runtime.Composable
@@ -103,6 +107,11 @@ private class CameraSession(
     private val imageCapture = ImageCapture.Builder()
         .setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
         .setFlashMode(ImageCapture.FLASH_MODE_OFF)
+        .setResolutionSelector(
+            ResolutionSelector.Builder()
+                .setResolutionStrategy(ResolutionStrategy(MAX_CAPTURE_SIZE, ResolutionStrategy.FALLBACK_RULE_CLOSEST_LOWER_THEN_HIGHER))
+                .build(),
+        )
         .build()
     private val mainExecutor = ContextCompat.getMainExecutor(activity)
     private val displays = activity.getSystemService(DisplayManager::class.java)
@@ -137,6 +146,7 @@ private class CameraSession(
             provider = try {
                 future.get()
             } catch (e: Exception) {
+                Log.e(TAG, "CameraX could not be started", e)
                 onStatus(CameraStatus.Unavailable)
                 return@addListener
             }
@@ -177,6 +187,7 @@ private class CameraSession(
             onStatus(CameraStatus.Ready(this))
         } catch (e: Exception) {
             // Another app holding the camera, a device policy, a combination this camera can't do.
+            Log.e(TAG, "The camera could not be bound", e)
             camera = null
             boundFor = null
             onStatus(CameraStatus.Unavailable)
@@ -218,6 +229,8 @@ private class CameraSession(
                     }
 
                     override fun onError(exception: ImageCaptureException) {
+                        // The screen only says the photo was not taken; the reason, for a bug report, goes to the log.
+                        Log.e(TAG, "The photo could not be taken (ImageCapture error ${exception.imageCaptureError})", exception)
                         file.delete()
                         continuation.resumeWithException(exception)
                     }
@@ -226,3 +239,16 @@ private class CameraSession(
         }
     }
 }
+
+private const val TAG = "AndroidCamera"
+
+/**
+ * The largest photograph asked of the camera, about 20 megapixels: the usual full resolution of a
+ * phone camera fits under it, and the 48 to 200 megapixel modes of the newest sensors do not.
+ * CameraX crops the photo to the frame by decoding the cropped region into a bitmap and encoding
+ * it as a JPEG again, and at those sizes the bitmap alone is hundreds of megabytes, more than the
+ * app is allowed, so the capture ended in an out-of-memory error instead of a photo. CameraX
+ * compares sizes edge by edge, so a 4:3 size this wide or tall or smaller is kept, and the
+ * largest of them is taken.
+ */
+private val MAX_CAPTURE_SIZE = Size(5184, 3888)
