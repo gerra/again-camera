@@ -1,15 +1,15 @@
 // Android application configuration for :composeApp (applied only when again.android=true).
 android {
-    namespace "sh.gerra.again"
-    compileSdk libs.versions.android.compileSdk.get().toInteger()
+    namespace = "sh.gerra.again"
+    compileSdk = libs.versions.android.compileSdk.get().toInteger()
 
     defaultConfig {
         // Public on Google Play, and Play never lets it change after the first upload.
-        applicationId "sh.gerra.again"
-        minSdk libs.versions.android.minSdk.get().toInteger()
-        targetSdk libs.versions.android.targetSdk.get().toInteger()
-        versionCode((project.findProperty("again.versionCode") ?: "1").toInteger())
-        versionName "1.0"
+        applicationId = "sh.gerra.again"
+        minSdk = libs.versions.android.minSdk.get().toInteger()
+        targetSdk = libs.versions.android.targetSdk.get().toInteger()
+        versionCode = (project.findProperty("again.versionCode") ?: "1").toInteger()
+        versionName = "1.0"
     }
     packaging {
         resources {
@@ -18,17 +18,17 @@ android {
     }
     buildTypes {
         release {
-            minifyEnabled true
-            shrinkResources true
-            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
+            minifyEnabled = true
+            shrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     lint {
-        abortOnError true
-        warningsAsErrors false
+        abortOnError = true
+        warningsAsErrors = false
     }
 }
