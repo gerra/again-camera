@@ -20,6 +20,7 @@ import sh.gerra.again.domain.Guide
 import sh.gerra.again.domain.OverlayTransform
 import sh.gerra.again.domain.ReferencePhoto
 import sh.gerra.again.platform.CameraStatus
+import sh.gerra.again.platform.Lens
 import sh.gerra.again.platform.PickResult
 import sh.gerra.again.ui.screens.CameraModel
 import sh.gerra.again.ui.screens.CameraProblem
@@ -118,6 +119,46 @@ class CameraModelTest {
         assertFalse(model.state.value.canCapture)
         model.onCameraStatus(CameraStatus.Ready(camera.controller))
         assertEquals(true, camera.flash)
+    }
+
+    @Test
+    fun theOtherCameraIsOfferedOnlyWhereThereIsOne() = runTest {
+        val model = CameraModel(reference, photos)
+        assertFalse(model.state.value.canSwitchLens)
+        model.onCameraStatus(CameraStatus.Ready(TestCamera(lenses = 1).controller))
+        assertFalse(model.state.value.canSwitchLens)
+        model.onCameraStatus(CameraStatus.Ready(camera.controller))
+        assertTrue(model.state.value.canSwitchLens)
+    }
+
+    @Test
+    fun switchingCamerasKeepsTheAlignmentAndSurvivesTheReopening() = runTest {
+        val model = readyModel()
+        model.onTransformChanged(panX = 0.1f, panY = 0f, zoom = 1.2f, rotation = 0f)
+        val lined = model.state.value.guide
+        assertEquals(Lens.Back, model.state.value.lens)
+        model.onLensToggled()
+        assertEquals(Lens.Front, model.state.value.lens)
+        assertEquals(lined, model.state.value.guide)
+        // The preview reopens through the new lens; the choice is the model's, so it stays.
+        model.onCameraStatus(CameraStatus.Opening)
+        model.onCameraStatus(CameraStatus.Ready(camera.controller))
+        assertEquals(Lens.Front, model.state.value.lens)
+        model.onLensToggled()
+        assertEquals(Lens.Back, model.state.value.lens)
+    }
+
+    @Test
+    fun theCameraIsNotSwitchedWhileAPhotoIsBeingTaken() = runTest {
+        val shot = CompletableDeferred<CapturedPhoto>()
+        camera.onCapture = { shot.await() }
+        val model = readyModel()
+        model.onCapture { _, _ -> }
+        model.onLensToggled()
+        assertEquals(Lens.Back, model.state.value.lens)
+        shot.complete(CapturedPhoto("/cache/again-4.jpg"))
+        model.onLensToggled()
+        assertEquals(Lens.Front, model.state.value.lens)
     }
 
     @Test

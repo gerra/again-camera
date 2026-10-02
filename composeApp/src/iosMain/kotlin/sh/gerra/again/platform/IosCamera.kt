@@ -48,7 +48,7 @@ internal class IosCamera : Camera {
     }
 
     @Composable
-    override fun Preview(modifier: Modifier, onStatus: (CameraStatus) -> Unit) {
+    override fun Preview(modifier: Modifier, lens: Lens, onStatus: (CameraStatus) -> Unit) {
         val status by rememberUpdatedState(onStatus)
         val session = remember { IosCameraSession { status(it) } }
         DisposableEffect(session) {
@@ -60,8 +60,10 @@ internal class IosCamera : Camera {
             }
         }
         UIKitView(
-            factory = { CameraPreviewView().also(session::open) },
+            factory = { CameraPreviewView() },
             modifier = modifier,
+            // Once the view exists, and again whenever the lens changes.
+            update = { view -> session.show(view, lens) },
             // Drawn under the Compose layers, which keep every touch: the guide's gestures are over it.
             properties = UIKitInteropProperties(isInteractive = false, isNativeAccessibilityEnabled = false),
         )

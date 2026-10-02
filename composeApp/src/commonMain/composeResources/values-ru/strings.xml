@@ -16,6 +16,8 @@
     <string name="camera_reset">Сбросить</string>
     <string name="camera_flash_on">Вспышка вкл.</string>
     <string name="camera_flash_off">Вспышка выкл.</string>
+    <string name="camera_lens_front">Селфи-камера</string>
+    <string name="camera_lens_back">Основная камера</string>
     <string name="camera_opacity">Старое фото</string>
     <string name="camera_opacity_description">Насколько заметно старое фото</string>
     <string name="percent">%1$d %</string>

@@ -58,6 +58,7 @@ import sh.gerra.again.domain.Guide
 import sh.gerra.again.domain.ReferencePhoto
 import sh.gerra.again.platform.Camera
 import sh.gerra.again.platform.CameraPermission
+import sh.gerra.again.platform.Lens
 import sh.gerra.again.platform.Photos
 import sh.gerra.again.resources.Res
 import sh.gerra.again.resources.*
@@ -72,7 +73,8 @@ import sh.gerra.again.ui.theme.Scrim
 /**
  * The live camera in a frame shaped like the old photo, with the old photo laid over it, see-through,
  * to be pinched and dragged into line. The frame is also exactly what the shutter records: the camera
- * crops its photograph to it, so the new photo has the old one's proportions.
+ * crops its photograph to it, so the new photo has the old one's proportions. Beside the shutter, on a
+ * phone with two cameras, a button turns the camera on yourself for a selfie, and back.
  */
 @Composable
 internal fun CameraScreen(
@@ -117,7 +119,20 @@ internal fun CameraScreen(
                 ) {
                     OpacityControl(state.guide.opacity, model::onOpacityChanged)
                     Spacer(Modifier.height(if (column) 8.dp else 12.dp))
-                    Shutter(enabled = state.canCapture, capturing = state.isCapturing, onClick = { model.onCapture(onCaptured) })
+                    // The shutter in the middle whatever is beside it; the other camera to its right.
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Spacer(Modifier.weight(1f))
+                        Shutter(enabled = state.canCapture, capturing = state.isCapturing, onClick = { model.onCapture(onCaptured) })
+                        Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                            if (state.canSwitchLens) {
+                                ActionButton(
+                                    icon = AgainIcons.SwitchCamera,
+                                    label = stringResource(if (state.lens == Lens.Back) Res.string.camera_lens_front else Res.string.camera_lens_back),
+                                    onClick = model::onLensToggled,
+                                )
+                            }
+                        }
+                    }
                 }
             },
         ) {
@@ -143,7 +158,7 @@ private fun Viewfinder(camera: Camera, model: CameraModel, state: CameraUiState,
     val frameDescription = stringResource(Res.string.camera_frame_description)
     // Shaped like the old photo and as large as fits.
     Box(Modifier.aspectRatio(image.width.toFloat() / image.height).clipToBounds().background(Color.Black)) {
-        camera.Preview(Modifier.fillMaxSize(), model::onCameraStatus)
+        camera.Preview(Modifier.fillMaxSize(), state.lens, model::onCameraStatus)
         GuideImage(image, state.guide.transform, Modifier.fillMaxSize(), opacity = state.guide.opacity)
         CaptureFlash(state.shots)
         // On top of everything, so the gestures reach the guide and never the platform's preview view.

@@ -24,9 +24,11 @@ import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
+import org.jetbrains.skia.Image
 import sh.gerra.again.domain.CapturedPhoto
 import sh.gerra.again.domain.OverlayTransform
 import sh.gerra.again.platform.CameraPermission
+import sh.gerra.again.platform.Lens
 import sh.gerra.again.ui.nav.Navigator
 import sh.gerra.again.ui.nav.Screen
 import sh.gerra.again.ui.screens.CameraModel
@@ -93,6 +95,46 @@ class AppFlowTest {
         waitUntilExactlyOneExists(hasContentDescription("Take photo") and isEnabled(), 5_000)
         assertEquals(cameraEntry, navigator.current)
         assertEquals(lined, cameraEntry.peek(CameraModel::class)!!.state.value.guide)
+    }
+
+    /** A selfie: the front camera shows a mirror, and its photograph is the same mirror, as lined up. */
+    @Test
+    fun aSelfieIsTakenAsTheMirrorThePreviewShowed() = runComposeUiTest {
+        val camera = FakeCamera(File(dir, "selfie-captures"))
+        val photos = DesktopPhotos(home = File(dir, "selfie"), pickFile = { old })
+        val navigator = Navigator()
+        setContent { App(photos, camera, navigator) }
+
+        onNodeWithText("Choose an old photo").performClick()
+        waitUntilExactlyOneExists(hasContentDescription("Take photo") and isEnabled(), 5_000)
+        onNodeWithText("Back camera").assertDoesNotExist()
+        onNodeWithText("Selfie camera").performClick()
+        waitUntilExactlyOneExists(hasText("Back camera"), 5_000)
+        onNodeWithText("Selfie camera").assertDoesNotExist()
+        val cameraEntry = navigator.current
+        assertEquals(Lens.Front, cameraEntry.peek(CameraModel::class)!!.state.value.lens)
+
+        onNodeWithContentDescription("Take photo").performClick()
+        waitUntilExactlyOneExists(hasText("Then"), 5_000)
+        val taken = File((navigator.current.screen as Screen.Compare).capture.path).readBytes()
+        val image = Image.makeFromEncoded(taken)
+        assertContentEquals(renderScene(image.width, image.height, mirrored = true), taken)
+
+        // Retake: still the front camera.
+        onNodeWithText("Retake").performClick()
+        waitUntilExactlyOneExists(hasText("Back camera"), 5_000)
+        assertEquals(Lens.Front, cameraEntry.peek(CameraModel::class)!!.state.value.lens)
+    }
+
+    @Test
+    fun aPhoneWithOneCameraOffersNoOther() = runComposeUiTest {
+        val photos = DesktopPhotos(home = File(dir, "one-camera"), pickFile = { old })
+        setContent { App(photos, TestCamera(lenses = 1)) }
+
+        onNodeWithText("Choose an old photo").performClick()
+        waitUntilExactlyOneExists(hasContentDescription("Take photo") and isEnabled(), 5_000)
+        onNodeWithText("Selfie camera").assertDoesNotExist()
+        onNodeWithText("Back camera").assertDoesNotExist()
     }
 
     @Test

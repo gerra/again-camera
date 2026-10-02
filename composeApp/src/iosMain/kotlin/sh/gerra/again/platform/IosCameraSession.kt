@@ -118,15 +118,18 @@ private fun AVCaptureConnection.turnTo(orientation: AVCaptureVideoOrientation) {
 
 /**
  * One opening of the camera: an [AVCaptureSession] feeding the preview layer and a photo output,
- * from [open] until [close] stops it for good. iOS pauses the session by itself while the app is in
- * the background and resumes it on return.
+ * from [show] until [close] stops it for good. iOS pauses the session by itself while the app is in
+ * the background and resumes it on return. Switching to the other camera swaps the session's input
+ * while it runs.
  *
  * The photograph is cropped to exactly what the preview layer shows — as CameraX's viewport does on
  * Android — so it has the frame's proportions, which are the old photo's. It is the camera's own
- * picture: nothing drawn on the screen, the guide least of all, can get into it.
+ * picture: nothing drawn on the screen, the guide least of all, can get into it. The front camera's
+ * preview is a mirror, and its photograph is made one too, or what was lined up would come out the
+ * other way round.
  *
- * Everything here runs on the main thread except the session's start and stop, which block and go to
- * [queue], and the cropping and writing of a photo.
+ * Everything here runs on the main thread except the session's configuration, start and stop, which
+ * block and go to [queue], and the cropping and writing of a photo.
  */
 @OptIn(ExperimentalForeignApi::class)
 internal class IosCameraSession(private val onStatus: (CameraStatus) -> Unit) : CameraController {
@@ -134,6 +137,9 @@ internal class IosCameraSession(private val onStatus: (CameraStatus) -> Unit) : 
     private val output = AVCapturePhotoOutput()
     private val queue = dispatch_queue_create("sh.gerra.again.camera", null)
     private var device: AVCaptureDevice? = null
+    private var input: AVCaptureDeviceInput? = null
+    private var outputAdded = false
+    private var lens = Lens.Back
     private var view: CameraPreviewView? = null
     private var observers: List<NSObjectProtocol> = emptyList()
     private var flash = false
@@ -142,8 +148,14 @@ internal class IosCameraSession(private val onStatus: (CameraStatus) -> Unit) : 
     /** Held until their photo arrives: the photo output does not keep its delegates alive. */
     private val pending = mutableSetOf<PhotoDelegate>()
 
-    fun open(view: CameraPreviewView) {
+    /** The first call opens the camera in [view] through [lens]; the later ones only switch the lens. */
+    fun show(view: CameraPreviewView, lens: Lens) {
+        if (this.view == null) open(view, lens) else switchTo(lens)
+    }
+
+    private fun open(view: CameraPreviewView, lens: Lens) {
         this.view = view
+        this.lens = lens
         view.previewLayer.session = session
         onStatus(CameraStatus.Opening)
         observers = listOf(
@@ -157,11 +169,25 @@ internal class IosCameraSession(private val onStatus: (CameraStatus) -> Unit) : 
             },
             observe(AVCaptureSessionInterruptionEndedNotification) { onStatus(CameraStatus.Ready(this)) },
         )
+        apply(lens, start = true)
+    }
+
+    /** The other camera, swapped into the running session; the view keeps showing it, now as the new one sees. */
+    private fun switchTo(lens: Lens) {
+        if (lens == this.lens || closed) return
+        this.lens = lens
+        onStatus(CameraStatus.Opening)
+        apply(lens, start = false)
+    }
+
+    /** On [queue]: puts the camera for [lens] into the session, starts it if asked, and says how that went. */
+    private fun apply(lens: Lens, start: Boolean) {
         dispatch_async(queue) {
-            val configured = configure()
-            if (configured) session.startRunning()
+            val configured = configure(lens)
+            if (configured && start) session.startRunning()
             dispatch_async(dispatch_get_main_queue()) {
                 if (closed) return@dispatch_async
+                // A new input gives the preview layer a new connection, to be turned like the last one.
                 this.view?.let { it.previewLayer.connection?.turnTo(it.videoOrientation()) }
                 onStatus(if (configured && session.running) CameraStatus.Ready(this) else CameraStatus.Unavailable)
             }
@@ -173,23 +199,37 @@ internal class IosCameraSession(private val onStatus: (CameraStatus) -> Unit) : 
             if (!closed) onNotification(notification)
         }
 
-    /** The back camera, or the front one on a device with only that; false when there is none to use. */
-    private fun configure(): Boolean {
-        val device = listOf(AVCaptureDevicePositionBack, AVCaptureDevicePositionFront).firstNotNullOfOrNull {
-            AVCaptureDevice.defaultDeviceWithDeviceType(AVCaptureDeviceTypeBuiltInWideAngleCamera, AVMediaTypeVideo, it)
-        } ?: return false
+    /**
+     * Puts the camera for [lens] — or the other one, on a device with just that — into the session in
+     * place of whichever was there; false when there is none to use. Nothing changes when it is the
+     * camera already in use.
+     */
+    private fun configure(lens: Lens): Boolean {
+        val device = listOf(lens, lens.other).firstNotNullOfOrNull(::deviceFor) ?: return false
+        if (device == this.device) return true
         val input = AVCaptureDeviceInput.deviceInputWithDevice(device, null) ?: return false
         session.beginConfiguration()
         session.sessionPreset = AVCaptureSessionPresetPhoto
-        val added = session.canAddInput(input) && session.canAddOutput(output)
+        this.input?.let(session::removeInput)
+        val added = session.canAddInput(input) && (outputAdded || session.canAddOutput(output))
         if (added) {
             session.addInput(input)
-            session.addOutput(output)
+            if (!outputAdded) {
+                session.addOutput(output)
+                outputAdded = true
+            }
         }
         session.commitConfiguration()
-        if (added) this.device = device
+        this.device = device.takeIf { added }
+        this.input = input.takeIf { added }
         return added
     }
+
+    private fun deviceFor(lens: Lens): AVCaptureDevice? = AVCaptureDevice.defaultDeviceWithDeviceType(
+        AVCaptureDeviceTypeBuiltInWideAngleCamera,
+        AVMediaTypeVideo,
+        if (lens == Lens.Back) AVCaptureDevicePositionBack else AVCaptureDevicePositionFront,
+    )
 
     fun close() {
         closed = true
@@ -201,6 +241,8 @@ internal class IosCameraSession(private val onStatus: (CameraStatus) -> Unit) : 
     }
 
     override val hasFlash: Boolean get() = device?.hasFlash == true
+
+    override val canSwitchLens: Boolean get() = Lens.entries.all { deviceFor(it) != null }
 
     override fun setFlash(enabled: Boolean) {
         flash = enabled
@@ -214,6 +256,10 @@ internal class IosCameraSession(private val onStatus: (CameraStatus) -> Unit) : 
         connection.turnTo(view.videoOrientation())
         // What the preview shows, as a fraction of the camera's picture in the sensor's own orientation.
         val crop = view.previewLayer.metadataOutputRectOfInterestForRect(view.previewLayer.bounds)
+        // The photograph is to be the mirror image exactly when the preview is (the front camera's,
+        // which iOS mirrors by itself); the photo output's own picture is not, so the difference is
+        // made up in the orientation the JPEG is written with.
+        val mirrored = (view.previewLayer.connection?.videoMirrored == true) != connection.videoMirrored
         val settings = AVCapturePhotoSettings.photoSettings()
         val flashOn = flash && output.supportedFlashModes.any { (it as? NSNumber)?.longValue == AVCaptureFlashModeOn }
         settings.flashMode = if (flashOn) AVCaptureFlashModeOn else AVCaptureFlashModeOff
@@ -230,14 +276,15 @@ internal class IosCameraSession(private val onStatus: (CameraStatus) -> Unit) : 
         } finally {
             pending -= delegate
         }
-        withContext(Dispatchers.Default) { writeCropped(photo, crop) }
+        withContext(Dispatchers.Default) { writeCropped(photo, crop, mirrored) }
     }
 
     /**
      * The photo cut down to [crop] and written as a JPEG into [capturesDirectory]. The pixels stay
-     * as the sensor wrote them and the JPEG says which way is up, as the camera's own file does.
+     * as the sensor wrote them and the JPEG says which way is up, as the camera's own file does, and
+     * whether it is [mirrored].
      */
-    private fun writeCropped(photo: AVCapturePhoto, crop: CValue<CGRect>): CapturedPhoto {
+    private fun writeCropped(photo: AVCapturePhoto, crop: CValue<CGRect>, mirrored: Boolean): CapturedPhoto {
         val image = photo.CGImageRepresentation() ?: error("The camera returned no picture")
         val width = CGImageGetWidth(image).toDouble()
         val height = CGImageGetHeight(image).toDouble()
@@ -246,7 +293,7 @@ internal class IosCameraSession(private val onStatus: (CameraStatus) -> Unit) : 
         check(!CGRectIsEmpty(bounded)) { "Nothing of the photo is in the frame" }
         val cropped = CGImageCreateWithImageInRect(image, bounded) ?: error("The photo could not be cropped")
         try {
-            val jpeg = UIImageJPEGRepresentation(UIImage.imageWithCGImage(cropped, 1.0, orientationOf(photo)), JPEG_QUALITY)
+            val jpeg = UIImageJPEGRepresentation(UIImage.imageWithCGImage(cropped, 1.0, orientationOf(photo, mirrored)), JPEG_QUALITY)
                 ?: error("The photo could not be encoded")
             val folder = capturesDirectory()
             NSFileManager.defaultManager.createDirectoryAtPath(folder, withIntermediateDirectories = true, attributes = null, error = null)
@@ -267,9 +314,26 @@ internal class IosCameraSession(private val onStatus: (CameraStatus) -> Unit) : 
     }
 }
 
-/** How the camera said the picture is turned (its EXIF orientation), as UIKit names it. */
-private fun orientationOf(photo: AVCapturePhoto): UIImageOrientation =
-    when ((photo.metadata[EXIF_ORIENTATION] as? NSNumber)?.intValue) {
+/**
+ * How the camera said the picture is turned (its EXIF orientation), as UIKit names it — or, when
+ * [mirrored], the mirror image of that: the same way up, left for right.
+ */
+private fun orientationOf(photo: AVCapturePhoto, mirrored: Boolean): UIImageOrientation {
+    val exif = (photo.metadata[EXIF_ORIENTATION] as? NSNumber)?.intValue ?: 1
+    // EXIF pairs each way up with its mirror image: 1 and 2 upright, 3 and 4 upside down, 6 and 5
+    // turned one way, 8 and 7 the other.
+    val seen = if (!mirrored) exif else when (exif) {
+        1 -> 2
+        2 -> 1
+        3 -> 4
+        4 -> 3
+        5 -> 6
+        6 -> 5
+        7 -> 8
+        8 -> 7
+        else -> 2
+    }
+    return when (seen) {
         2 -> UIImageOrientation.UIImageOrientationUpMirrored
         3 -> UIImageOrientation.UIImageOrientationDown
         4 -> UIImageOrientation.UIImageOrientationDownMirrored
@@ -279,6 +343,7 @@ private fun orientationOf(photo: AVCapturePhoto): UIImageOrientation =
         8 -> UIImageOrientation.UIImageOrientationLeft
         else -> UIImageOrientation.UIImageOrientationUp
     }
+}
 
 /** kCGImagePropertyOrientation's value, as a plain key into the photo's metadata. */
 private const val EXIF_ORIENTATION = "Orientation"
